@@ -1,0 +1,28 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# https://www.playframework.com/documentation/latest/ScalaRouting
+# ~~~~
+
+# An example controller showing a sample home page
+GET     /                           controllers.HomeController.index()
+
+# API routes for frontend integration
+GET     /api/health                 controllers.api.ApiController.health()
+POST    /api/echo                   controllers.api.ApiController.echo()
+
+# User management routes (database-backed)
+GET     /api/users                  controllers.user.UserController.getAllUsers()
+GET     /api/users/:id              controllers.user.UserController.getUser(id: Long)
+POST    /api/users                  controllers.user.UserController.createUser()
+PUT     /api/users/:id              controllers.user.UserController.updateUser(id: Long)
+DELETE  /api/users/:id              controllers.user.UserController.deleteUser(id: Long)
+
+# Mock API routes (for testing/demo)
+GET     /api/mock/users             controllers.api.ApiController.getUsers()
+GET     /api/mock/users/:id         controllers.api.ApiController.getUser(id: Long)
+POST    /api/mock/users             controllers.api.ApiController.createUser()
+PUT     /api/mock/users/:id         controllers.api.ApiController.updateUser(id: Long)
+DELETE  /api/mock/users/:id         controllers.api.ApiController.deleteUser(id: Long)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

@@ -1,0 +1,42 @@
+# SBT and Play Framework
+logs
+target
+/.bsp
+/RUNNING_PID
+dist/
+.cache
+.history
+.lib/
+
+# IDE
+/.idea
+/.idea_modules
+/.classpath
+/.project
+/.settings
+/.vscode
+/.metals
+/.g8
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.log
+*.pid
+*.swp
+*.tmp
+*~
+
+# Environment
+.env
+.env.local
+
+# Claude Code
+/.claude

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: scala-play-postgres
+    environment:
+      POSTGRES_DB: playdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - scala-play-network
+
+  scala-play-backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: scala-play-backend
+    ports:
+      - "9000:9000"
+    environment:
+      - APPLICATION_SECRET=${APPLICATION_SECRET}
+      - PLAY_HTTP_SECRET_KEY=${PLAY_HTTP_SECRET_KEY}
+      - DB_DEFAULT_URL=${DB_DEFAULT_URL}
+      - DB_DEFAULT_USERNAME=${DB_DEFAULT_USERNAME}
+      - DB_DEFAULT_PASSWORD=${DB_DEFAULT_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - scala-play-network
+
+networks:
+  scala-play-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

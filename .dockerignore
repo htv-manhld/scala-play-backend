@@ -1,0 +1,49 @@
+# SBT
+target/
+project/target/
+project/project/
+.cache-main
+.cache-tests
+.history
+.lib/
+dist/*
+/*.jar
+/*.ivy
+/.sbt
+/.ivy2
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Logs
+*.log
+logs/
+
+# Runtime
+RUNNING_PID
+
+# Test
+test-results/
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+*~
