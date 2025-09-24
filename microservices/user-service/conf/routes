@@ -1,0 +1,12 @@
+# User Service Routes
+# Health check
+GET     /health                     controllers.HealthController.health()
+
+# User API endpoints
+GET     /api/users                  controllers.UserController.getAllUsers(page: Int ?= 0, size: Int ?= 20)
+GET     /api/users/:id              controllers.UserController.getUser(id: String)
+GET     /api/users/by-email/:email  controllers.UserController.getUserByEmail(email: String)
+POST    /api/users                  controllers.UserController.createUser()
+PUT     /api/users/:id              controllers.UserController.updateUser(id: String)
+PUT     /api/users/:id/email        controllers.UserController.changeUserEmail(id: String)
+DELETE  /api/users/:id              controllers.UserController.deleteUser(id: String)

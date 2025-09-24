@@ -1,0 +1,10 @@
+# Analytics Service Routes
+
+# Health check
+GET     /health                             controllers.HealthController.health()
+
+# Analytics endpoints
+GET     /api/analytics/metrics/user         controllers.AnalyticsController.getUserMetrics(startDate: Option[String] ?= None, endDate: Option[String] ?= None)
+GET     /api/analytics/metrics/system       controllers.AnalyticsController.getSystemMetrics()
+GET     /api/analytics/reports/:reportType  controllers.AnalyticsController.getReports(reportType: String)
+POST    /api/analytics/events               controllers.AnalyticsController.trackEvent()

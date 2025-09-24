@@ -1,0 +1,7 @@
+# API Gateway Routes
+
+# Home page
+GET     /                           controllers.HomeController.index()
+
+# Health check
+GET     /health                     controllers.HealthController.health()

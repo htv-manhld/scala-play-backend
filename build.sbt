@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
   .enablePlugins(PlayScala, FlywayPlugin)
   .settings(
     name := "scala-play-backend",
-    scalaVersion := "3.3.6",
+    scalaVersion := "3.7.3",
     javacOptions ++= Seq("-source", "21", "-target", "21"),
     // Flyway configuration
     flywayUrl := "jdbc:postgresql://localhost:5432/playdb",
@@ -31,9 +31,3 @@ lazy val root = (project in file("."))
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.14.3"
     )
   )
-
-// Adds additional packages into Twirl
-//TwirlKeys.templateImports += "com.demo.controllers._"
-
-// Adds additional packages into conf/routes
-// play.sbt.routes.RoutesKeys.routesImport += "com.demo.binders._"
