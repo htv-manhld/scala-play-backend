@@ -1,0 +1,16 @@
+# User Service Routes
+# Health check
+GET     /health                     controllers.HealthController.health()
+
+# User API endpoints
+GET     /api/users                  interfaces.rest.UserController.getAllUsers(page: Int ?= 0, size: Int ?= 20)
+GET     /api/users/:id              interfaces.rest.UserController.getUser(id: Long)
+GET     /api/users/by-email/:email  interfaces.rest.UserController.getUserByEmail(email: String)
+POST    /api/users                  interfaces.rest.UserController.createUser()
+PUT     /api/users/:id              interfaces.rest.UserController.updateUser(id: Long)
+PUT     /api/users/:id/email        interfaces.rest.UserController.changeUserEmail(id: Long)
+DELETE  /api/users/:id              interfaces.rest.UserController.deleteUser(id: Long)
+
+# Internal service endpoints (for service-to-service communication)
+GET     /internal/users/:id         controllers.InternalUserController.getUser(id: Long)
+POST    /internal/users/batch       controllers.InternalUserController.getUsersBatch()

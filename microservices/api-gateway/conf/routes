@@ -1,0 +1,34 @@
+# API Gateway Routes
+
+# Health and status
+GET     /health                     controllers.HealthController.health()
+GET     /metrics                    controllers.MetricsController.metrics()
+
+# Authentication
+POST    /api/auth/login             controllers.AuthController.login()
+POST    /api/auth/refresh           controllers.AuthController.refreshToken()
+POST    /api/auth/logout            controllers.AuthController.logout()
+
+# User service proxy routes
+GET     /api/users                  interfaces.rest.GatewayController.proxyToUserService(path = "api/users")
+GET     /api/users/:id              interfaces.rest.GatewayController.proxyToUserService(path = "api/users/:id")
+GET     /api/users/by-email/:email  interfaces.rest.GatewayController.proxyToUserService(path = "api/users/by-email/:email")
+POST    /api/users                  interfaces.rest.GatewayController.proxyToUserService(path = "api/users")
+PUT     /api/users/:id              interfaces.rest.GatewayController.proxyToUserService(path = "api/users/:id")
+PUT     /api/users/:id/email        interfaces.rest.GatewayController.proxyToUserService(path = "api/users/:id/email")
+DELETE  /api/users/:id              interfaces.rest.GatewayController.proxyToUserService(path = "api/users/:id")
+
+# Notification service proxy routes
+POST    /api/notifications/send     interfaces.rest.GatewayController.proxyToNotificationService(path = "api/notifications/send")
+GET     /api/notifications/:userId  interfaces.rest.GatewayController.proxyToNotificationService(path = "api/notifications/:userId")
+
+# Analytics service proxy routes
+GET     /api/analytics/users        interfaces.rest.GatewayController.proxyToAnalyticsService(path = "api/analytics/users")
+GET     /api/analytics/metrics      interfaces.rest.GatewayController.proxyToAnalyticsService(path = "api/analytics/metrics")
+
+# Catch-all for other routes
+GET     /*path                      controllers.ProxyController.handleRequest(path)
+POST    /*path                      controllers.ProxyController.handleRequest(path)
+PUT     /*path                      controllers.ProxyController.handleRequest(path)
+DELETE  /*path                      controllers.ProxyController.handleRequest(path)
+PATCH   /*path                      controllers.ProxyController.handleRequest(path)

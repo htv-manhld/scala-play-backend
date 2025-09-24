@@ -1,0 +1,14 @@
+# Analytics Service Routes
+
+# Health check
+GET     /health                     controllers.HealthController.health()
+
+# Analytics endpoints
+GET     /api/analytics/users        controllers.AnalyticsController.getUserMetrics(startDate: Option[String] ?= None, endDate: Option[String] ?= None)
+GET     /api/analytics/metrics      controllers.AnalyticsController.getSystemMetrics()
+GET     /api/analytics/reports      controllers.AnalyticsController.getReports(type: String ?= "daily")
+POST    /api/analytics/events       controllers.AnalyticsController.trackEvent()
+
+# Internal service endpoints
+POST    /internal/analytics/record  controllers.InternalAnalyticsController.recordMetric()
+GET     /internal/analytics/query   controllers.InternalAnalyticsController.queryData()

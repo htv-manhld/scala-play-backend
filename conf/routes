@@ -1,28 +1,18 @@
-# Routes
-# This file defines all application routes (Higher priority routes first)
-# https://www.playframework.com/documentation/latest/ScalaRouting
-# ~~~~
+# Legacy Redirector Routes
+# Business logic has been moved to microservices
+# This app now serves as a redirector and information page
 
-# An example controller showing a sample home page
-GET     /                           controllers.HomeController.index()
+# Health check endpoint
+GET     /health                     controllers.RedirectController.health()
 
-# API routes for frontend integration
-GET     /api/health                 controllers.api.ApiController.health()
-POST    /api/echo                   controllers.api.ApiController.echo()
+# Main page with microservices information
+GET     /                           controllers.RedirectController.index()
 
-# User management routes (database-backed)
-GET     /api/users                  controllers.user.UserController.getAllUsers()
-GET     /api/users/:id              controllers.user.UserController.getUser(id: Long)
-POST    /api/users                  controllers.user.UserController.createUser()
-PUT     /api/users/:id              controllers.user.UserController.updateUser(id: Long)
-DELETE  /api/users/:id              controllers.user.UserController.deleteUser(id: Long)
-
-# Mock API routes (for testing/demo)
-GET     /api/mock/users             controllers.api.ApiController.getUsers()
-GET     /api/mock/users/:id         controllers.api.ApiController.getUser(id: Long)
-POST    /api/mock/users             controllers.api.ApiController.createUser()
-PUT     /api/mock/users/:id         controllers.api.ApiController.updateUser(id: Long)
-DELETE  /api/mock/users/:id         controllers.api.ApiController.deleteUser(id: Long)
+# Redirect all API requests to API Gateway
+GET     /api/*path                  controllers.RedirectController.index()
+POST    /api/*path                  controllers.RedirectController.index()
+PUT     /api/*path                  controllers.RedirectController.index()
+DELETE  /api/*path                  controllers.RedirectController.index()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

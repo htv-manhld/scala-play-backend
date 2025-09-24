@@ -1,0 +1,14 @@
+# Notification Service Routes
+
+# Health check
+GET     /health                     controllers.HealthController.health()
+
+# Notification endpoints
+POST    /api/notifications/send     controllers.NotificationController.sendNotification()
+GET     /api/notifications/:userId  controllers.NotificationController.getUserNotifications(userId: String)
+GET     /api/notifications/status/:id controllers.NotificationController.getNotificationStatus(id: String)
+
+# Internal service endpoints
+POST    /internal/email/send        controllers.InternalNotificationController.sendEmail()
+POST    /internal/sms/send          controllers.InternalNotificationController.sendSMS()
+POST    /internal/push/send         controllers.InternalNotificationController.sendPushNotification()
