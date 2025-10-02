@@ -3,9 +3,9 @@ package application.user
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import domain.user.{User, UserId, Email, UserProfile, UserRepository}
-import domain.shared.DomainError
+import domain.shared.{DomainError, PaginatedResponse}
 import infrastructure.messaging.EventPublisher
-import application.shared.{ApplicationBase, LoggingService}
+import application.shared.{ApplicationBase, LoggingService, PasswordHasher}
 import application.user.commands._
 import application.user.queries._
 
@@ -32,12 +32,16 @@ class UserService @Inject()(
   }
 
   def handle(query: GetAllUsersQuery): Future[Seq[User]] = {
-    userRepository.findAll(query.page, query.size)
+    userRepository.findAll(query.limit)
+  }
+
+  def handle(query: GetUsersPaginatedQuery): Future[PaginatedResponse[User]] = {
+    userRepository.findAllPaginated(query.page, query.size)
   }
 
   // Command operations (Write)
   def handle(command: CreateUserCommand): Future[Either[DomainError, User]] = {
-    executeWithLogging("CreateUserCommand", Map("email" -> command.email.value, "name" -> command.name, "age" -> command.age.toString)) {
+    executeWithLogging("CreateUserCommand", Map("email" -> command.email.value, "name" -> command.name)) {
       for {
         // Check if user with email already exists
         existingUser <- userRepository.findByEmail(command.email)
@@ -47,8 +51,11 @@ class UserService @Inject()(
           case None =>
             // Create domain user
             try {
-              val userProfile = UserProfile(command.name, command.age)
-              User.create(command.email, userProfile) match {
+              val userProfile = UserProfile(command.name, command.birthdate)
+              // Hash password if provided
+              val hashedPassword = command.password.map(PasswordHasher.hashPassword)
+
+              User.create(command.email, userProfile, hashedPassword) match {
                 case Right(user) =>
                   for {
                     savedUserResult <- userRepository.save(user)
@@ -79,7 +86,7 @@ class UserService @Inject()(
       result <- userOption match {
         case Some(user) =>
           try {
-            val newProfile = UserProfile(command.name, command.age)
+            val newProfile = UserProfile(command.name, command.birthdate)
             val updatedUser = user.changeProfile(newProfile)
 
             for {

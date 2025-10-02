@@ -24,8 +24,8 @@ class UserController @Inject()(
   }
 
   // GET /api/users
-  def getAllUsers(page: Int, size: Int): Action[AnyContent] = Action.async { implicit request =>
-    val query = GetAllUsersQuery(page, size)
+  def getAllUsers(limit: Int): Action[AnyContent] = Action.async { implicit request =>
+    val query = GetAllUsersQuery(limit)
 
     userService.handle(query).map { users =>
       val usersDto = users.map(UserResponseDto.fromDomain)
@@ -33,6 +33,36 @@ class UserController @Inject()(
       val response = Json.obj(
         "success" -> true,
         "data" -> usersDto,
+        "message" -> "Users retrieved successfully"
+      )
+      Ok(response)
+    }.recover {
+      case ex: Exception =>
+        val response = Json.obj(
+          "success" -> false,
+          "error" -> ex.getMessage,
+          "code" -> "INTERNAL_ERROR"
+        )
+        InternalServerError(response)
+    }
+  }
+
+  // GET /api/users/paginated
+  def getUsersPaginated(page: Int, size: Int): Action[AnyContent] = Action.async { implicit request =>
+    val query = GetUsersPaginatedQuery(page, size)
+
+    userService.handle(query).map { paginatedResult =>
+      val usersDto = paginatedResult.data.map(UserResponseDto.fromDomain)
+
+      val response = Json.obj(
+        "success" -> true,
+        "data" -> usersDto,
+        "pagination" -> Json.obj(
+          "page" -> paginatedResult.pagination.page,
+          "size" -> paginatedResult.pagination.size,
+          "total" -> paginatedResult.pagination.total,
+          "totalPages" -> paginatedResult.pagination.totalPages
+        ),
         "message" -> "Users retrieved successfully"
       )
       Ok(response)
@@ -129,7 +159,8 @@ class UserController @Inject()(
           val command = CreateUserCommand(
             email = Email(dto.email),
             name = dto.name,
-            age = dto.age
+            password = dto.password,
+            birthdate = dto.birthdate.map(java.time.LocalDate.parse)
           )
 
           userService.handle(command).map {
@@ -177,33 +208,43 @@ class UserController @Inject()(
   def updateUser(id: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body.validate[UpdateUserRequestDto] match {
       case JsSuccess(dto, _) =>
-        val command = UpdateUserProfileCommand(
-          userId = UserId(id.toLong),
-          name = dto.name,
-          age = dto.age
-        )
+        try {
+          val command = UpdateUserProfileCommand(
+            userId = UserId(id.toLong),
+            name = dto.name,
+            birthdate = dto.birthdate.map(java.time.LocalDate.parse)
+          )
 
-        userService.handle(command).map {
-          case Right(user) =>
-            val userDto = UserResponseDto.fromDomain(user)
+          userService.handle(command).map {
+            case Right(user) =>
+              val userDto = UserResponseDto.fromDomain(user)
 
-            val response = Json.obj(
-              "success" -> true,
-              "data" -> userDto,
-              "message" -> "User updated successfully"
-            )
-            Ok(response)
-          case Left(error) =>
-            val code = errorCode(error)
+              val response = Json.obj(
+                "success" -> true,
+                "data" -> userDto,
+                "message" -> "User updated successfully"
+              )
+              Ok(response)
+            case Left(error) =>
+              val code = errorCode(error)
+              val response = Json.obj(
+                "success" -> false,
+                "error" -> error.message,
+                "code" -> code
+              )
+              code match {
+                case "NOT_FOUND" => NotFound(response)
+                case _ => BadRequest(response)
+              }
+          }
+        } catch {
+          case ex: IllegalArgumentException =>
             val response = Json.obj(
               "success" -> false,
-              "error" -> error.message,
-              "code" -> code
+              "error" -> ex.getMessage,
+              "code" -> "VALIDATION_ERROR"
             )
-            code match {
-              case "NOT_FOUND" => NotFound(response)
-              case _ => BadRequest(response)
-            }
+            Future.successful(BadRequest(response))
         }
       case JsError(errors) =>
         val errorMessage = errors.map { case (path, validationErrors) =>

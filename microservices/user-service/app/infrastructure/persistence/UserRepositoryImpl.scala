@@ -3,11 +3,11 @@ package infrastructure.persistence
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import slick.jdbc.PostgresProfile.api._
-import java.time.LocalDateTime
+import java.time.{LocalDate, LocalDateTime}
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
-import domain.user.{User, UserId, Email, UserProfile, UserRepository}
-import domain.shared.DomainError
+import domain.user.{User, UserId, Email, UserProfile, UserRepository, UserStatus}
+import domain.shared.{DomainError, PaginatedResponse, PaginationInfo}
 
 @Singleton
 class UserRepositoryImpl @Inject()(
@@ -22,11 +22,15 @@ class UserRepositoryImpl @Inject()(
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def email = column[String]("email")
-    def age = column[Int]("age")
+    def password = column[Option[String]]("password")
+    def status = column[Int]("status")
+    def birthdate = column[Option[LocalDate]]("birthdate")
+    def lastLoginAt = column[Option[LocalDateTime]]("last_login_at")
+    def verifiedAt = column[Option[LocalDateTime]]("verified_at")
     def createdAt = column[LocalDateTime]("created_at")
     def updatedAt = column[LocalDateTime]("updated_at")
 
-    def * = (id, name, email, age, createdAt, updatedAt).mapTo[UserRow]
+    def * = (id, name, email, password, status, birthdate, lastLoginAt, verifiedAt, createdAt, updatedAt).mapTo[UserRow]
   }
 
   private val users = TableQuery[UsersTable]
@@ -36,7 +40,11 @@ class UserRepositoryImpl @Inject()(
     id: Long,
     name: String,
     email: String,
-    age: Int,
+    password: Option[String],
+    status: Int,
+    birthdate: Option[LocalDate],
+    lastLoginAt: Option[LocalDateTime],
+    verifiedAt: Option[LocalDateTime],
     createdAt: LocalDateTime,
     updatedAt: LocalDateTime
   )
@@ -46,7 +54,11 @@ class UserRepositoryImpl @Inject()(
     User(
       id = UserId(row.id),
       email = Email(row.email),
-      profile = UserProfile(row.name, row.age),
+      password = row.password,
+      profile = UserProfile(row.name, row.birthdate),
+      status = UserStatus.fromInt(row.status),
+      lastLoginAt = row.lastLoginAt,
+      verifiedAt = row.verifiedAt,
       createdAt = row.createdAt,
       updatedAt = row.updatedAt,
       version = 0 // Version will be handled separately if needed
@@ -58,7 +70,11 @@ class UserRepositoryImpl @Inject()(
       id = user.id.value,
       name = user.profile.name,
       email = user.email.value,
-      age = user.profile.age,
+      password = user.password,
+      status = user.status.value,
+      birthdate = user.profile.birthdate,
+      lastLoginAt = user.lastLoginAt,
+      verifiedAt = user.verifiedAt,
       createdAt = user.createdAt,
       updatedAt = user.updatedAt
     )
@@ -80,14 +96,40 @@ class UserRepositoryImpl @Inject()(
     }
   }
 
-  override def findAll(page: Int = 0, size: Int = 20): Future[Seq[User]] = {
+  override def findAll(limit: Int = 10000): Future[Seq[User]] = {
     val query = users
       .sortBy(_.id.asc)
-      .drop(page * size)
-      .take(size)
+      .take(limit)
 
     db.run(query.result).map(_.map(toDomain)).recover {
       case _ => Seq.empty
+    }
+  }
+
+  override def findAllPaginated(page: Int = 0, size: Int = 20): Future[PaginatedResponse[User]] = {
+    // Query for total count
+    val countQuery = users.length.result
+
+    // Query for paginated data
+    val dataQuery = users
+      .sortBy(_.id.asc)
+      .drop(page * size)
+      .take(size)
+      .result
+
+    // Run both queries in parallel
+    val combinedQuery = for {
+      total <- countQuery
+      rows <- dataQuery
+    } yield (total, rows)
+
+    db.run(combinedQuery).map { case (total, rows) =>
+      val userList = rows.map(toDomain)
+      val paginationInfo = PaginationInfo(page, size, total.toLong)
+      PaginatedResponse(userList, paginationInfo)
+    }.recover {
+      case _ =>
+        PaginatedResponse(Seq.empty, PaginationInfo(page, size, 0L))
     }
   }
 
@@ -111,8 +153,17 @@ class UserRepositoryImpl @Inject()(
       // Update existing user
       val updateAction = users
         .filter(_.id === user.id.value)
-        .map(u => (u.name, u.email, u.age, u.updatedAt))
-        .update((user.profile.name, user.email.value, user.profile.age, LocalDateTime.now()))
+        .map(u => (u.name, u.email, u.password, u.status, u.birthdate, u.lastLoginAt, u.verifiedAt, u.updatedAt))
+        .update((
+          user.profile.name,
+          user.email.value,
+          user.password,
+          user.status.value,
+          user.profile.birthdate,
+          user.lastLoginAt,
+          user.verifiedAt,
+          LocalDateTime.now()
+        ))
 
       db.run(updateAction).flatMap { rowsAffected =>
         if (rowsAffected > 0) {

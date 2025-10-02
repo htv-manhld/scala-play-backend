@@ -1,7 +1,7 @@
 package controllers.dto
 
 import play.api.libs.json._
-import domain.user.User
+import domain.user.{User, UserStatus}
 import java.time.LocalDateTime
 
 // Response DTOs
@@ -9,7 +9,10 @@ case class UserResponseDto(
   id: String,
   email: String,
   name: String,
-  age: Int,
+  birthdate: Option[String],
+  status: Int,
+  lastLoginAt: Option[String],
+  verifiedAt: Option[String],
   createdAt: String,
   updatedAt: String
 )
@@ -21,7 +24,10 @@ object UserResponseDto {
     id = user.id.value.toString,
     email = user.email.value,
     name = user.profile.name,
-    age = user.profile.age,
+    birthdate = user.profile.birthdate.map(_.toString),
+    status = user.status.value, // Return raw DB value: 0 or 1
+    lastLoginAt = user.lastLoginAt.map(_.toString),
+    verifiedAt = user.verifiedAt.map(_.toString),
     createdAt = user.createdAt.toString,
     updatedAt = user.updatedAt.toString
   )
@@ -31,7 +37,8 @@ object UserResponseDto {
 case class CreateUserRequestDto(
   email: String,
   name: String,
-  age: Int
+  password: Option[String] = None,
+  birthdate: Option[String] = None
 )
 
 object CreateUserRequestDto {
@@ -40,7 +47,7 @@ object CreateUserRequestDto {
 
 case class UpdateUserRequestDto(
   name: String,
-  age: Int
+  birthdate: Option[String] = None
 )
 
 object UpdateUserRequestDto {

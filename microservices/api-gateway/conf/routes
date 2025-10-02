@@ -5,3 +5,29 @@ GET     /                           controllers.HomeController.index()
 
 # Health check
 GET     /health                     controllers.HealthController.health()
+
+# User Service - Proxy all user-related requests
+GET     /api/users                  interfaces.rest.GatewayController.proxyToUserService(path = "")
+GET     /api/users/                 interfaces.rest.GatewayController.proxyToUserService(path = "")
+GET     /api/users/*path            interfaces.rest.GatewayController.proxyToUserService(path)
+POST    /api/users                  interfaces.rest.GatewayController.proxyToUserService(path = "")
+POST    /api/users/*path            interfaces.rest.GatewayController.proxyToUserService(path)
+PUT     /api/users/*path            interfaces.rest.GatewayController.proxyToUserService(path)
+DELETE  /api/users/*path            interfaces.rest.GatewayController.proxyToUserService(path)
+PATCH   /api/users/*path            interfaces.rest.GatewayController.proxyToUserService(path)
+
+# Notification Service - Proxy all notification-related requests
+GET     /api/notifications          interfaces.rest.GatewayController.proxyToNotificationService(path = "")
+GET     /api/notifications/*path    interfaces.rest.GatewayController.proxyToNotificationService(path)
+POST    /api/notifications          interfaces.rest.GatewayController.proxyToNotificationService(path = "")
+POST    /api/notifications/*path    interfaces.rest.GatewayController.proxyToNotificationService(path)
+PUT     /api/notifications/*path    interfaces.rest.GatewayController.proxyToNotificationService(path)
+DELETE  /api/notifications/*path    interfaces.rest.GatewayController.proxyToNotificationService(path)
+
+# Analytics Service - Proxy all analytics-related requests
+GET     /api/analytics              interfaces.rest.GatewayController.proxyToAnalyticsService(path = "")
+GET     /api/analytics/*path        interfaces.rest.GatewayController.proxyToAnalyticsService(path)
+POST    /api/analytics              interfaces.rest.GatewayController.proxyToAnalyticsService(path = "")
+POST    /api/analytics/*path        interfaces.rest.GatewayController.proxyToAnalyticsService(path)
+PUT     /api/analytics/*path        interfaces.rest.GatewayController.proxyToAnalyticsService(path)
+DELETE  /api/analytics/*path        interfaces.rest.GatewayController.proxyToAnalyticsService(path)

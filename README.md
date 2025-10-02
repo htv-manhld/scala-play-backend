@@ -52,17 +52,28 @@ microservices/[service-name]/app/
 
 ### 🔄 Microservices Architecture
 
+**API Gateway Pattern**: All client requests go through API Gateway (port 9000), providing a single entry point with routing, authentication, rate limiting, and load balancing.
+
+```
+Client Requests → API Gateway :9000 → Backend Services
+                       ↓
+            ┌──────────┼──────────┐
+            ↓          ↓          ↓
+      User Service  Notification  Analytics
+         :9001        :9002        :9003
+```
+
 ```
 microservices/
-├── api-gateway/        # Port 9000 - Routing, Auth, Rate Limiting
+├── api-gateway/        # Port 9000 - Single Entry Point
 │   ├── Dockerfile
 │   ├── build.sbt
 │   ├── conf/application.conf
 │   ├── .env
 │   └── app/
-│       ├── interfaces/rest/     # Gateway controllers
-│       ├── application/shared/  # Cross-cutting concerns
-│       └── infrastructure/external/  # Service integrations
+│       ├── interfaces/rest/     # Gateway controllers & routing
+│       ├── application/shared/  # Cross-cutting concerns (Auth, Rate Limiting)
+│       └── infrastructure/external/  # Service integrations & proxying
 │
 ├── user-service/       # Port 9001 - User Management with DDD
 │   ├── Dockerfile
@@ -117,19 +128,30 @@ Script will automatically:
 
 ### Verify Services
 ```bash
-# All services should return {"status":"ok"}
-curl http://localhost:9001/health  # User Service
-curl http://localhost:9002/health  # Notification Service
-curl http://localhost:9003/health  # Analytics Service
+# Check API Gateway health
+curl http://localhost:9000/health
 
-# Test the full event-driven flow
-curl -X POST http://localhost:9001/api/users \
+# All requests go through API Gateway (port 9000)
+# Gateway routes to backend services automatically
+
+# Run database migrations
+docker exec microservices-user-service migrate
+
+# Test the full event-driven flow via API Gateway
+curl -X POST http://localhost:9000/api/users \
   -H "Content-Type: application/json" \
   -d '{"name":"John Doe","email":"john@example.com","age":30}'
 
-# Check analytics (totalUsers should increment)
-curl http://localhost:9003/api/analytics/metrics/system
+# Check analytics via API Gateway (totalUsers should increment)
+curl http://localhost:9000/api/analytics/metrics/system
+
+# Direct service access (for debugging only)
+curl http://localhost:9001/health  # User Service
+curl http://localhost:9002/health  # Notification Service
+curl http://localhost:9003/health  # Analytics Service
 ```
+
+**Note:** Migrations auto-run on startup, but you can manually trigger with `docker exec microservices-user-service migrate`
 
 ### Optional: Manual Environment Setup
 ```bash
@@ -143,8 +165,13 @@ nano microservices/notification-service/.env  # Update SMTP settings
 ## 🛠️ Technology Stack
 
 ### Core Services
-- **API Gateway** (9000) - JWT Auth, Rate Limiting, Service Routing
-- **User Service** (9001) - User domain với DDD patterns
+- **API Gateway** (9000) - **Single Entry Point**
+  - Routing: Route requests to backend services
+  - Authentication: JWT validation & token management
+  - Rate Limiting: Throttling per client/endpoint
+  - Load Balancing: Distribute traffic across service instances
+  - Request/Response transformation
+- **User Service** (9001) - User domain with DDD patterns
 - **Notification Service** (9002) - Email & Push notifications
 - **Analytics Service** (9003) - Metrics & Reporting
 
@@ -159,20 +186,92 @@ nano microservices/notification-service/.env  # Update SMTP settings
 - **Prometheus** (9090) - Metrics collection
 - **Grafana** (3000) - Monitoring dashboards
 
+## 🚪 API Gateway Pattern
+
+### Why Use API Gateway?
+
+**Before API Gateway:**
+```
+Mobile App  ──→ User Service :9001
+Web App     ──→ Notification Service :9002
+Desktop App ──→ Analytics Service :9003
+```
+❌ Clients must know all service endpoints
+❌ Duplicate authentication logic in each service
+❌ Hard to manage CORS, rate limiting
+❌ No centralized logging
+
+**After API Gateway:**
+```
+Mobile App  ─┐
+Web App     ─┼──→ API Gateway :9000 ──→ Backend Services
+Desktop App ─┘
+```
+✅ Single entry point for all clients
+✅ Centralized authentication & authorization
+✅ Unified rate limiting & CORS policies
+✅ Centralized request logging & monitoring
+✅ Automatic service discovery & load balancing
+
+### Request Flow Through API Gateway
+
+```
+1. Client → API Gateway :9000
+   POST /api/users
+   Headers: Authorization: Bearer <token>
+
+2. API Gateway processing:
+   ├─ Validate JWT token
+   ├─ Check rate limit
+   ├─ Log request
+   └─ Route to User Service
+
+3. API Gateway → User Service :9001
+   POST /api/users
+   Headers: X-User-Id, X-Request-Id
+
+4. User Service processes → Response
+
+5. API Gateway transforms response → Client
+   {success: true, data: {...}}
+```
+
+### Gateway Features
+
+**Authentication & Authorization:**
+- JWT token validation
+- User role/permission checks
+- Token refresh mechanism
+
+**Traffic Management:**
+- Rate limiting per client/endpoint
+- Request throttling
+- Load balancing across service instances
+
+**Request Transformation:**
+- Add correlation IDs for tracing
+- Inject user context headers
+- Format standardization
+
+**Observability:**
+- Centralized request logging
+- Performance metrics per endpoint
+- Error tracking & alerting
+
 ## 📊 DDD Patterns Implementation
 
 ### 🏗️ Tactical Patterns
-- ✅ **Aggregate Root**: `User` aggregate với business rules
-- ✅ **Value Objects**: `Email`, `UserProfile` với validation
+- ✅ **Aggregate Root**: `User` aggregate with business rules
+- ✅ **Value Objects**: `Email`, `UserProfile` with validation
 - ✅ **Domain Events**: `UserCreated`, `UserProfileChanged`, `UserEmailChanged`, `UserDeactivated`
-- ✅ **Repository Pattern**: Interface ở domain, implementation ở infrastructure
-- ✅ **Domain Services**: `UserDomainService` cho complex business logic
+- ✅ **Repository Pattern**: Interface in domain, implementation in infrastructure
+- ✅ **Domain Services**: `UserDomainService` for complex business logic
 - ✅ **Specifications**: Flexible business rules validation
 
 ### 🎯 Strategic Patterns
 - ✅ **Bounded Contexts**: User Management, Notifications, Analytics
 - ✅ **Context Mapping**: Service-to-service communication
-- ✅ **Anti-Corruption Layer**: DTOs để isolate external concerns
+- ✅ **Anti-Corruption Layer**: DTOs to isolate external concerns
 
 ## 🔄 Event-Driven Architecture
 
@@ -217,24 +316,39 @@ docker compose exec kafka kafka-console-consumer \
 
 ## 📋 API Endpoints
 
-### User Management
+**Important**: All API requests must go through the **API Gateway** at `http://localhost:9000`
+
+### API Gateway Routing Rules
+```
+GET/POST  /api/users/*           → User Service (9001)
+GET/POST  /api/notifications/*   → Notification Service (9002)
+GET/POST  /api/analytics/*       → Analytics Service (9003)
+GET       /health                → API Gateway health
+```
+
+### User Management (via API Gateway)
 ```bash
+# Base URL: http://localhost:9000
+
 # CRUD Operations
-GET    /api/users              # List all users
-GET    /api/users/{id}         # Get user by ID
-GET    /api/users/by-email/{email}  # Get user by email
-POST   /api/users              # Create new user
-PUT    /api/users/{id}         # Update user profile
-PUT    /api/users/{id}/email   # Change user email
-DELETE /api/users/{id}         # Delete user
+GET    /api/users                     # List all users
+GET    /api/users/{id}                # Get user by ID
+GET    /api/users/by-email/{email}    # Get user by email
+POST   /api/users                     # Create new user
+PUT    /api/users/{id}                # Update user profile
+PUT    /api/users/{id}/email          # Change user email
+DELETE /api/users/{id}                # Delete user
+
+# Analytics (via API Gateway)
+GET    /api/analytics/metrics/system  # System metrics
 
 # Health & Status
-GET    /api/health             # Service health check
+GET    /health                        # API Gateway health
 ```
 
 ### Request/Response Examples
 ```bash
-# Create User
+# Create User (via API Gateway)
 curl -X POST http://localhost:9000/api/users \
   -H "Content-Type: application/json" \
   -d '{
@@ -243,7 +357,13 @@ curl -X POST http://localhost:9000/api/users \
     "age": 30
   }'
 
-# Response
+# Get All Users (via API Gateway)
+curl http://localhost:9000/api/users
+
+# Get Analytics (via API Gateway)
+curl http://localhost:9000/api/analytics/metrics/system
+
+# Response Format
 {
   "success": true,
   "data": {"id": 1},
@@ -256,18 +376,18 @@ curl -X POST http://localhost:9000/api/users \
 
 ### Health Checks
 - All services expose `/health` endpoint
-- Container health checks với automatic restart
+- Container health checks with automatic restart
 - Service dependency validation
 
 ### Metrics & Logging
 - **Prometheus** metrics at `/metrics` endpoints
 - **Grafana** dashboards for visualization
-- Structured logging với correlation IDs
+- Structured logging with correlation IDs
 - Distributed tracing headers
 
 ### Service Discovery
 - **Consul** for service registration
-- Automatic service discovery và load balancing
+- Automatic service discovery and load balancing
 - Health-based routing
 
 ## 🧪 Testing Strategy
@@ -280,7 +400,7 @@ sbt "testOnly domain.user.*"
 
 ### Application Layer Tests
 ```bash
-# Test use cases và workflows
+# Test use cases and workflows
 sbt "testOnly application.user.*"
 ```
 
@@ -407,6 +527,17 @@ docker compose top
 ```
 
 ### Database Operations
+
+#### Migrations (Play Evolutions)
+```bash
+# Run migrations manually
+docker exec microservices-user-service migrate
+
+# Migrations auto run when start service (autoApply=true in application.conf)
+# Migration files: microservices/user-service/conf/evolutions/default/*.sql
+```
+
+#### Database Access
 ```bash
 # Access separate databases per service
 docker compose exec user-db psql -U postgres -d userdb
@@ -570,20 +701,21 @@ docker compose logs analytics-service | grep "Analytics"
 
 ### Phase 2: Advanced Patterns
 - [ ] **CQRS (Command Query Responsibility Segregation)**
-- [ ] **Event Sourcing** cho audit trail
-- [ ] **SAGA Pattern** cho distributed transactions
-- [ ] **Circuit Breaker** pattern cho fault tolerance
+- [ ] **Event Sourcing** for audit trail
+- [ ] **SAGA Pattern** for distributed transactions
+- [ ] **Circuit Breaker** pattern for fault tolerance
 
 ### Phase 3: Production Readiness
-- [ ] **API Versioning** với backward compatibility
-- [ ] **Distributed Tracing** với Jaeger/Zipkin
-- [ ] **Advanced Security** với OAuth2/OIDC
+- [x] **API Gateway** - ✅ Implemented (routing, auth, rate limiting)
+- [ ] **API Versioning** with backward compatibility
+- [ ] **Distributed Tracing** with Jaeger/Zipkin
+- [ ] **Advanced Security** with OAuth2/OIDC
 - [x] **Database per Service** - ✅ Implemented (separate DBs for each service)
-- [ ] **Kubernetes Deployment** với Helm charts
+- [ ] **Kubernetes Deployment** with Helm charts
 
 ### Phase 4: Observability & DevOps
-- [ ] **Advanced Monitoring** với custom metrics
-- [ ] **Log Aggregation** với ELK Stack
+- [ ] **Advanced Monitoring** with custom metrics
+- [ ] **Log Aggregation** with ELK Stack
 - [ ] **Automated Testing** pipeline
 - [ ] **Blue-Green Deployment**
 - [ ] **Chaos Engineering** testing

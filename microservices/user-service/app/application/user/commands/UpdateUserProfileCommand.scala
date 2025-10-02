@@ -1,9 +1,10 @@
 package application.user.commands
 
 import domain.user.UserId
+import java.time.LocalDate
 
 case class UpdateUserProfileCommand(
   userId: UserId,
   name: String,
-  age: Int
+  birthdate: Option[LocalDate] = None
 )

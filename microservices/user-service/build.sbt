@@ -23,6 +23,9 @@ lazy val root = (project in file("."))
       "org.playframework" %% "play-ws" % "3.0.4",
 
       // Kafka
-      "org.apache.kafka" % "kafka-clients" % "3.6.1"
+      "org.apache.kafka" % "kafka-clients" % "3.6.1",
+
+      // Password Hashing
+      "org.mindrot" % "jbcrypt" % "0.4"
     )
   )

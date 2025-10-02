@@ -22,46 +22,70 @@ class GatewayController @Inject()(
   private val analyticsServiceUrl = config.get[String]("services.analytics-service.url")
 
   // Proxy all user-related requests to user-service
-  def proxyToUserService(path: String): Action[AnyContent] = Action.async { request =>
-    val url = s"$userServiceUrl/$path"
+  def proxyToUserService(path: String = ""): Action[AnyContent] = Action.async(parse.anyContent) { request =>
+    val fullPath = if (path.isEmpty) "api/users" else s"api/users/$path"
+    val url = s"$userServiceUrl/$fullPath"
     proxyRequest(url, request)
   }
 
   // Proxy all notification-related requests
-  def proxyToNotificationService(path: String): Action[AnyContent] = Action.async { request =>
-    val url = s"$notificationServiceUrl/$path"
+  def proxyToNotificationService(path: String = ""): Action[AnyContent] = Action.async(parse.anyContent) { request =>
+    val fullPath = if (path.isEmpty) "api/notifications" else s"api/notifications/$path"
+    val url = s"$notificationServiceUrl/$fullPath"
     proxyRequest(url, request)
   }
 
   // Proxy all analytics-related requests
-  def proxyToAnalyticsService(path: String): Action[AnyContent] = Action.async { request =>
-    val url = s"$analyticsServiceUrl/$path"
+  def proxyToAnalyticsService(path: String = ""): Action[AnyContent] = Action.async(parse.anyContent) { request =>
+    val fullPath = if (path.isEmpty) "api/analytics" else s"api/analytics/$path"
+    val url = s"$analyticsServiceUrl/$fullPath"
     proxyRequest(url, request)
   }
 
   private def proxyRequest(url: String, request: Request[AnyContent]): Future[Result] = {
-    val wsRequest = ws.url(url)
-      .withHttpHeaders(request.headers.headers: _*)
-      .withQueryStringParameters(request.queryString.map { case (k, v) => k -> v.head }.toSeq: _*)
-
-    val wsRequestWithBody = request.body.asJson match {
-      case Some(json) => wsRequest.withBody(json)
-      case None => wsRequest
+    // Filter out headers that should not be forwarded
+    val headersToExclude = Set("Host", "Content-Length", "Content-Type", "Transfer-Encoding")
+    val filteredHeaders = request.headers.headers.filterNot { case (name, _) =>
+      headersToExclude.contains(name)
     }
+
+    val wsRequest = ws.url(url)
+      .withHttpHeaders(filteredHeaders*)
+      .withQueryStringParameters(request.queryString.map { case (k, v) => k -> v.head }.toSeq*)
+      .withRequestTimeout(scala.concurrent.duration.Duration(30, "seconds"))
 
     val method = request.method.toUpperCase
     val futureResponse = method match {
-      case "GET" => wsRequestWithBody.get()
-      case "POST" => wsRequestWithBody.post(request.body.asJson.getOrElse(play.api.libs.json.Json.obj()))
-      case "PUT" => wsRequestWithBody.put(request.body.asJson.getOrElse(play.api.libs.json.Json.obj()))
-      case "DELETE" => wsRequestWithBody.delete()
-      case "PATCH" => wsRequestWithBody.patch(request.body.asJson.getOrElse(play.api.libs.json.Json.obj()))
-      case _ => wsRequestWithBody.get()
+      case "GET" => wsRequest.get()
+      case "POST" =>
+        request.body.asJson match {
+          case Some(json) => wsRequest.post(json)
+          case None => wsRequest.post("")
+        }
+      case "PUT" =>
+        request.body.asJson match {
+          case Some(json) => wsRequest.put(json)
+          case None => wsRequest.put("")
+        }
+      case "DELETE" => wsRequest.delete()
+      case "PATCH" =>
+        request.body.asJson match {
+          case Some(json) => wsRequest.patch(json)
+          case None => wsRequest.patch("")
+        }
+      case _ => wsRequest.get()
     }
 
     futureResponse.map { response =>
+      // Filter response headers as well
+      val responseHeadersToExclude = Set("Content-Type", "Content-Length", "Transfer-Encoding")
+      val filteredResponseHeaders = response.headers
+        .filterNot { case (name, _) => responseHeadersToExclude.contains(name) }
+        .map { case (k, v) => k -> v.head }
+        .toSeq
+
       Status(response.status)(response.body)
-        .withHeaders(response.headers.map { case (k, v) => k -> v.head }.toSeq: _*)
+        .withHeaders(filteredResponseHeaders*)
         .as(response.contentType)
     }
   }

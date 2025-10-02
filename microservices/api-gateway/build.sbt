@@ -13,6 +13,7 @@ lazy val root = (project in file("."))
 
       // HTTP Client for service communication
       "org.playframework" %% "play-ws" % "3.0.4",
+      "org.playframework" %% "play-ahc-ws" % "3.0.4",
 
       // JSON
       "org.playframework" %% "play-json" % "3.0.4"
