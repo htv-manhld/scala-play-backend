@@ -1,0 +1,83 @@
+UserSuccessResponse:
+  description: User retrieved successfully
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/UserSuccessResponse'
+
+UsersSuccessResponse:
+  description: Users retrieved successfully
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/UsersSuccessResponse'
+
+PaginatedUsersResponse:
+  description: Users retrieved successfully with pagination
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/PaginatedUsersResponse'
+
+UserCreatedResponse:
+  description: User created successfully
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/UserSuccessResponse'
+
+UserDeletedResponse:
+  description: User deleted successfully
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          success:
+            type: boolean
+            examples:
+              - true
+          message:
+            type: string
+            examples:
+              - User deleted successfully
+
+BadRequestError:
+  description: Validation error
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorResponse'
+
+NotFoundError:
+  description: Resource not found
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorResponse'
+
+ConflictError:
+  description: Resource already exists
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorResponse'
+
+InternalServerError:
+  description: Internal server error
+  content:
+    application/json:
+      schema:
+        $ref: './schemas.yaml#/ErrorResponse'
+
+HealthCheckResponse:
+  description: Service is healthy
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          status:
+            type: string
+            examples:
+              - ok
