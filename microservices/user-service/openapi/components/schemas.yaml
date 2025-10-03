@@ -1,0 +1,255 @@
+User:
+  type: object
+  required:
+    - id
+    - email
+    - name
+    - status
+    - createdAt
+    - updatedAt
+  properties:
+    id:
+      type: string
+      description: User ID
+      examples:
+        - "1"
+    email:
+      type: string
+      format: email
+      description: User email address
+      examples:
+        - john.doe@example.com
+    name:
+      type: string
+      description: User full name
+      examples:
+        - John Doe
+    birthdate:
+      oneOf:
+        - type: string
+          format: date
+        - type: "null"
+      description: User birthdate
+      examples:
+        - "1990-01-15"
+    status:
+      type: integer
+      description: User status (0 = Inactive, 1 = Active)
+      enum: [0, 1]
+      examples:
+        - 1
+    lastLoginAt:
+      oneOf:
+        - type: string
+          format: date-time
+        - type: "null"
+      description: Last login timestamp
+      examples:
+        - "2024-01-15T10:30:00"
+    verifiedAt:
+      oneOf:
+        - type: string
+          format: date-time
+        - type: "null"
+      description: Email verification timestamp
+      examples:
+        - "2024-01-15T10:30:00"
+    createdAt:
+      type: string
+      format: date-time
+      description: Account creation timestamp
+      examples:
+        - "2024-01-15T10:30:00"
+    updatedAt:
+      type: string
+      format: date-time
+      description: Last update timestamp
+      examples:
+        - "2024-01-15T10:30:00"
+
+CreateUserRequest:
+  type: object
+  required:
+    - email
+    - name
+  properties:
+    email:
+      type: string
+      format: email
+      description: User email address
+      examples:
+        - john.doe@example.com
+    name:
+      type: string
+      description: User full name
+      minLength: 1
+      examples:
+        - John Doe
+    password:
+      oneOf:
+        - type: string
+          format: password
+        - type: "null"
+      description: User password (optional)
+      examples:
+        - SecurePass123!
+    birthdate:
+      oneOf:
+        - type: string
+          format: date
+        - type: "null"
+      description: User birthdate (optional)
+      examples:
+        - "1990-01-15"
+
+UpdateUserRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      description: User full name
+      minLength: 1
+      examples:
+        - John Doe
+    birthdate:
+      oneOf:
+        - type: string
+          format: date
+        - type: "null"
+      description: User birthdate (optional)
+      examples:
+        - "1990-01-15"
+
+ChangeEmailRequest:
+  type: object
+  required:
+    - email
+  properties:
+    email:
+      type: string
+      format: email
+      description: New email address
+      examples:
+        - newemail@example.com
+
+PaginationInfo:
+  type: object
+  required:
+    - page
+    - size
+    - total
+    - totalPages
+  properties:
+    page:
+      type: integer
+      description: Current page number (0-indexed)
+      examples:
+        - 0
+    size:
+      type: integer
+      description: Number of items per page
+      examples:
+        - 20
+    total:
+      type: integer
+      format: int64
+      description: Total number of items
+      examples:
+        - 100
+    totalPages:
+      type: integer
+      description: Total number of pages
+      examples:
+        - 5
+
+UserSuccessResponse:
+  type: object
+  required:
+    - success
+    - data
+    - message
+  properties:
+    success:
+      type: boolean
+      examples:
+        - true
+    data:
+      $ref: './schemas.yaml#/User'
+    message:
+      type: string
+      examples:
+        - User retrieved successfully
+
+UsersSuccessResponse:
+  type: object
+  required:
+    - success
+    - data
+    - message
+  properties:
+    success:
+      type: boolean
+      examples:
+        - true
+    data:
+      type: array
+      items:
+        $ref: './schemas.yaml#/User'
+    message:
+      type: string
+      examples:
+        - Users retrieved successfully
+
+PaginatedUsersResponse:
+  type: object
+  required:
+    - success
+    - data
+    - pagination
+    - message
+  properties:
+    success:
+      type: boolean
+      examples:
+        - true
+    data:
+      type: array
+      items:
+        $ref: './schemas.yaml#/User'
+    pagination:
+      $ref: './schemas.yaml#/PaginationInfo'
+    message:
+      type: string
+      examples:
+        - Users retrieved successfully
+
+ErrorResponse:
+  type: object
+  required:
+    - success
+    - error
+    - code
+  properties:
+    success:
+      type: boolean
+      examples:
+        - false
+    error:
+      type: string
+      description: Error message
+      examples:
+        - User not found
+    code:
+      type: string
+      description: Error code
+      enum:
+        - VALIDATION_ERROR
+        - NOT_FOUND
+        - INVALID_OPERATION
+        - DUPLICATE_ERROR
+        - INTERNAL_ERROR
+        - USER_NOT_FOUND
+      examples:
+        - USER_NOT_FOUND

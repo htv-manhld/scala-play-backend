@@ -1,0 +1,564 @@
+openapi: 3.1.0
+info:
+  title: API Gateway - All Services
+  description: Central API Gateway aggregating all microservices
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:9000
+    description: Local development API Gateway
+
+tags:
+  - name: users
+    description: User management endpoints
+  - name: health
+    description: Health check endpoints
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          $ref: '#/components/responses/HealthCheckResponse'
+  /api/users:
+    get:
+      tags:
+        - users
+      summary: Get all users
+      description: Retrieve all users with optional limit
+      operationId: getAllUsers
+      parameters:
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          $ref: '#/components/responses/UsersSuccessResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - users
+      summary: Create a new user
+      description: Create a new user account
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/UserCreatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/users/paginated:
+    get:
+      tags:
+        - users
+      summary: Get users with pagination
+      description: Retrieve users with pagination support
+      operationId: getUsersPaginated
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/SizeQuery'
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedUsersResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/users/{id}:
+    get:
+      tags:
+        - users
+      summary: Get user by ID
+      description: Retrieve a single user by their ID
+      operationId: getUserById
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserSuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - users
+      summary: Update user
+      description: Update user profile information
+      operationId: updateUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - users
+      summary: Delete user
+      description: Delete a user account
+      operationId: deleteUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserDeletedResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/users/by-email/{email}:
+    get:
+      tags:
+        - users
+      summary: Get user by email
+      description: Retrieve a single user by their email address
+      operationId: getUserByEmail
+      parameters:
+        - $ref: '#/components/parameters/UserEmail'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserSuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/users/{id}/email:
+    put:
+      tags:
+        - users
+      summary: Change user email
+      description: Update a user's email address
+      operationId: changeUserEmail
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeEmailRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: User ID
+          examples:
+            - '1'
+        email:
+          type: string
+          format: email
+          description: User email address
+          examples:
+            - john.doe@example.com
+        name:
+          type: string
+          description: User full name
+          examples:
+            - John Doe
+        birthdate:
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
+          description: User birthdate
+          examples:
+            - '1990-01-15'
+        status:
+          type: integer
+          description: User status (0 = Inactive, 1 = Active)
+          enum:
+            - 0
+            - 1
+          examples:
+            - 1
+        lastLoginAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: Last login timestamp
+          examples:
+            - '2024-01-15T10:30:00'
+        verifiedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: Email verification timestamp
+          examples:
+            - '2024-01-15T10:30:00'
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          examples:
+            - '2024-01-15T10:30:00'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          examples:
+            - '2024-01-15T10:30:00'
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          examples:
+            - john.doe@example.com
+        name:
+          type: string
+          description: User full name
+          minLength: 1
+          examples:
+            - John Doe
+        password:
+          type:
+            - string
+            - 'null'
+          format: password
+          description: User password (optional)
+          examples:
+            - SecurePass123!
+        birthdate:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: User birthdate (optional)
+          examples:
+            - '1990-01-15'
+    UpdateUserRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: User full name
+          minLength: 1
+          examples:
+            - John Doe
+        birthdate:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: User birthdate (optional)
+          examples:
+            - '1990-01-15'
+    ChangeEmailRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: New email address
+          examples:
+            - newemail@example.com
+    PaginationInfo:
+      type: object
+      required:
+        - page
+        - size
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          description: Current page number (0-indexed)
+          examples:
+            - 0
+        size:
+          type: integer
+          description: Number of items per page
+          examples:
+            - 20
+        total:
+          type: integer
+          format: int64
+          description: Total number of items
+          examples:
+            - 100
+        totalPages:
+          type: integer
+          description: Total number of pages
+          examples:
+            - 5
+    UserSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+        - message
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        data:
+          $ref: '#/components/schemas/User'
+        message:
+          type: string
+          examples:
+            - User retrieved successfully
+    UsersSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+        - message
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        message:
+          type: string
+          examples:
+            - Users retrieved successfully
+    PaginatedUsersResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+        - message
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+        message:
+          type: string
+          examples:
+            - Users retrieved successfully
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+        - code
+      properties:
+        success:
+          type: boolean
+          examples:
+            - false
+        error:
+          type: string
+          description: Error message
+          examples:
+            - User not found
+        code:
+          type: string
+          description: Error code
+          enum:
+            - VALIDATION_ERROR
+            - NOT_FOUND
+            - INVALID_OPERATION
+            - DUPLICATE_ERROR
+            - INTERNAL_ERROR
+            - USER_NOT_FOUND
+          examples:
+            - USER_NOT_FOUND
+  responses:
+    GetUserResponse:
+      $ref: '#/components/responses/UserSuccessResponse'
+    GetUsersResponse:
+      $ref: '#/components/responses/UsersSuccessResponse'
+    GetUsersPaginatedResponse:
+      $ref: '#/components/responses/PaginatedUsersResponse'
+    CreateUserResponse:
+      $ref: '#/components/responses/UserCreatedResponse'
+    DeleteUserResponse:
+      $ref: '#/components/responses/UserDeletedResponse'
+    BadRequestErrorResponse:
+      $ref: '#/components/responses/BadRequestError'
+    NotFoundErrorResponse:
+      $ref: '#/components/responses/NotFoundError'
+    ConflictErrorResponse:
+      $ref: '#/components/responses/ConflictError'
+    InternalServerErrorResponse:
+      $ref: '#/components/responses/InternalServerError'
+    HealthCheckApiResponse:
+      $ref: '#/components/responses/HealthCheckResponse'
+    HealthCheckResponse:
+      description: Service is healthy
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                examples:
+                  - ok
+    UsersSuccessResponse:
+      description: Users retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UsersSuccessResponse'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UserCreatedResponse:
+      description: User created successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserSuccessResponse'
+    BadRequestError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConflictError:
+      description: Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaginatedUsersResponse:
+      description: Users retrieved successfully with pagination
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PaginatedUsersResponse'
+    UserSuccessResponse:
+      description: User retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserSuccessResponse'
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UserDeletedResponse:
+      description: User deleted successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - true
+              message:
+                type: string
+                examples:
+                  - User deleted successfully
+  parameters:
+    UserId:
+      name: id
+      in: path
+      description: User ID
+      required: true
+      schema:
+        type: string
+    UserEmail:
+      name: email
+      in: path
+      description: User email address
+      required: true
+      schema:
+        type: string
+        format: email
+    LimitQuery:
+      name: limit
+      in: query
+      description: Maximum number of users to return
+      required: false
+      schema:
+        type: integer
+        default: 10000
+        minimum: 1
+        maximum: 10000
+    PageQuery:
+      name: page
+      in: query
+      description: Page number (0-indexed)
+      required: false
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+    SizeQuery:
+      name: size
+      in: query
+      description: Number of items per page
+      required: false
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+

@@ -22,21 +22,21 @@ class GatewayController @Inject()(
   private val analyticsServiceUrl = config.get[String]("services.analytics-service.url")
 
   // Proxy all user-related requests to user-service
-  def proxyToUserService(path: String = ""): Action[AnyContent] = Action.async(parse.anyContent) { request =>
+  def proxyToUserService(path: String = ""): Action[AnyContent] = Action.async { request =>
     val fullPath = if (path.isEmpty) "api/users" else s"api/users/$path"
     val url = s"$userServiceUrl/$fullPath"
     proxyRequest(url, request)
   }
 
   // Proxy all notification-related requests
-  def proxyToNotificationService(path: String = ""): Action[AnyContent] = Action.async(parse.anyContent) { request =>
+  def proxyToNotificationService(path: String = ""): Action[AnyContent] = Action.async { request =>
     val fullPath = if (path.isEmpty) "api/notifications" else s"api/notifications/$path"
     val url = s"$notificationServiceUrl/$fullPath"
     proxyRequest(url, request)
   }
 
   // Proxy all analytics-related requests
-  def proxyToAnalyticsService(path: String = ""): Action[AnyContent] = Action.async(parse.anyContent) { request =>
+  def proxyToAnalyticsService(path: String = ""): Action[AnyContent] = Action.async { request =>
     val fullPath = if (path.isEmpty) "api/analytics" else s"api/analytics/$path"
     val url = s"$analyticsServiceUrl/$fullPath"
     proxyRequest(url, request)

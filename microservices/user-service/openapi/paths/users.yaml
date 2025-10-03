@@ -1,0 +1,151 @@
+/api/users:
+  get:
+    tags:
+      - users
+    summary: Get all users
+    description: Retrieve all users with optional limit
+    operationId: getAllUsers
+    parameters:
+      - $ref: '../components/parameters.yaml#/LimitQuery'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/UsersSuccessResponse'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+  post:
+    tags:
+      - users
+    summary: Create a new user
+    description: Create a new user account
+    operationId: createUser
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/CreateUserRequest'
+    responses:
+      '201':
+        $ref: '../components/responses.yaml#/UserCreatedResponse'
+      '400':
+        $ref: '../components/responses.yaml#/BadRequestError'
+      '409':
+        $ref: '../components/responses.yaml#/ConflictError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/users/paginated:
+  get:
+    tags:
+      - users
+    summary: Get users with pagination
+    description: Retrieve users with pagination support
+    operationId: getUsersPaginated
+    parameters:
+      - $ref: '../components/parameters.yaml#/PageQuery'
+      - $ref: '../components/parameters.yaml#/SizeQuery'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/PaginatedUsersResponse'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/users/{id}:
+  get:
+    tags:
+      - users
+    summary: Get user by ID
+    description: Retrieve a single user by their ID
+    operationId: getUserById
+    parameters:
+      - $ref: '../components/parameters.yaml#/UserId'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/UserSuccessResponse'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+  put:
+    tags:
+      - users
+    summary: Update user
+    description: Update user profile information
+    operationId: updateUser
+    parameters:
+      - $ref: '../components/parameters.yaml#/UserId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateUserRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/UserSuccessResponse'
+      '400':
+        $ref: '../components/responses.yaml#/BadRequestError'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+  delete:
+    tags:
+      - users
+    summary: Delete user
+    description: Delete a user account
+    operationId: deleteUser
+    parameters:
+      - $ref: '../components/parameters.yaml#/UserId'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/UserDeletedResponse'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/users/by-email/{email}:
+  get:
+    tags:
+      - users
+    summary: Get user by email
+    description: Retrieve a single user by their email address
+    operationId: getUserByEmail
+    parameters:
+      - $ref: '../components/parameters.yaml#/UserEmail'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/UserSuccessResponse'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/users/{id}/email:
+  put:
+    tags:
+      - users
+    summary: Change user email
+    description: Update a user's email address
+    operationId: changeUserEmail
+    parameters:
+      - $ref: '../components/parameters.yaml#/UserId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/ChangeEmailRequest'
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/UserSuccessResponse'
+      '400':
+        $ref: '../components/responses.yaml#/BadRequestError'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'

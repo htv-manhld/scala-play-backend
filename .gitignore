@@ -41,3 +41,6 @@ microservices/*/.env
 
 # Claude Code
 /.claude
+
+# OpenAPI bundled files
+**/openapi-bundled.yaml

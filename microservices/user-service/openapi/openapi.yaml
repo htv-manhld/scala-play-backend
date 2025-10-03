@@ -1,0 +1,94 @@
+openapi: 3.1.0
+info:
+  title: User Service API
+  description: User management microservice
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:9001
+    description: User Service (direct)
+  - url: http://localhost:9000/api
+    description: API Gateway
+
+tags:
+  - name: users
+    description: User management endpoints
+  - name: health
+    description: Health check endpoints
+
+paths:
+  /health:
+    $ref: './paths/health.yaml'
+
+  /api/users:
+    $ref: './paths/users.yaml#/~1api~1users'
+
+  /api/users/paginated:
+    $ref: './paths/users.yaml#/~1api~1users~1paginated'
+
+  /api/users/{id}:
+    $ref: './paths/users.yaml#/~1api~1users~1{id}'
+
+  /api/users/by-email/{email}:
+    $ref: './paths/users.yaml#/~1api~1users~1by-email~1{email}'
+
+  /api/users/{id}/email:
+    $ref: './paths/users.yaml#/~1api~1users~1{id}~1email'
+
+components:
+  schemas:
+    User:
+      $ref: './components/schemas.yaml#/User'
+    CreateUserRequest:
+      $ref: './components/schemas.yaml#/CreateUserRequest'
+    UpdateUserRequest:
+      $ref: './components/schemas.yaml#/UpdateUserRequest'
+    ChangeEmailRequest:
+      $ref: './components/schemas.yaml#/ChangeEmailRequest'
+    PaginationInfo:
+      $ref: './components/schemas.yaml#/PaginationInfo'
+    UserSuccessResponse:
+      $ref: './components/schemas.yaml#/UserSuccessResponse'
+    UsersSuccessResponse:
+      $ref: './components/schemas.yaml#/UsersSuccessResponse'
+    PaginatedUsersResponse:
+      $ref: './components/schemas.yaml#/PaginatedUsersResponse'
+    ErrorResponse:
+      $ref: './components/schemas.yaml#/ErrorResponse'
+
+  responses:
+    GetUserResponse:
+      $ref: './components/responses.yaml#/UserSuccessResponse'
+    GetUsersResponse:
+      $ref: './components/responses.yaml#/UsersSuccessResponse'
+    GetUsersPaginatedResponse:
+      $ref: './components/responses.yaml#/PaginatedUsersResponse'
+    CreateUserResponse:
+      $ref: './components/responses.yaml#/UserCreatedResponse'
+    DeleteUserResponse:
+      $ref: './components/responses.yaml#/UserDeletedResponse'
+    BadRequestErrorResponse:
+      $ref: './components/responses.yaml#/BadRequestError'
+    NotFoundErrorResponse:
+      $ref: './components/responses.yaml#/NotFoundError'
+    ConflictErrorResponse:
+      $ref: './components/responses.yaml#/ConflictError'
+    InternalServerErrorResponse:
+      $ref: './components/responses.yaml#/InternalServerError'
+    HealthCheckApiResponse:
+      $ref: './components/responses.yaml#/HealthCheckResponse'
+
+  parameters:
+    UserId:
+      $ref: './components/parameters.yaml#/UserId'
+    UserEmail:
+      $ref: './components/parameters.yaml#/UserEmail'
+    LimitQuery:
+      $ref: './components/parameters.yaml#/LimitQuery'
+    PageQuery:
+      $ref: './components/parameters.yaml#/PageQuery'
+    SizeQuery:
+      $ref: './components/parameters.yaml#/SizeQuery'
