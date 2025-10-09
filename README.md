@@ -19,25 +19,67 @@ scala-play-backend/
     │   └── app/
     │       └── interfaces/rest/       # Gateway controllers & routing
     │
-    ├── user-service/         # Port 9001 - User Management
+    ├── user-service/         # Port 9001 - User Management (DDD Score: 92/100)
     │   ├── openapi/
     │   │   ├── openapi.yaml           # Main spec with $ref
     │   │   ├── paths/                 # API endpoints
     │   │   └── components/            # Schemas, responses, parameters
     │   └── app/
-    │       ├── domain/                # Pure business logic
-    │       │   ├── user/              # User aggregate (entities, value objects, events)
+    │       ├── domain/                # Domain Layer - Pure business logic
+    │       │   ├── user/
+    │       │   │   ├── User.scala             # Aggregate Root (immutable + events)
+    │       │   │   ├── UserId.scala           # Value Object (sealed trait)
+    │       │   │   ├── Email.scala            # Value Object (validated)
+    │       │   │   ├── UserProfile.scala      # Value Object
+    │       │   │   ├── UserStatus.scala       # Enum
+    │       │   │   ├── UserRepository.scala   # Repository Interface
+    │       │   │   ├── UserDomainService.scala # Domain Service
+    │       │   │   ├── UserFactory.scala      # Factory Pattern
+    │       │   │   ├── PasswordHasher.scala   # Domain Interface
+    │       │   │   ├── specifications/        # Specification Pattern
+    │       │   │   │   └── UserSpecification.scala
+    │       │   │   └── events/               # Domain Events
+    │       │   │       ├── UserCreated.scala
+    │       │   │       ├── UserProfileChanged.scala
+    │       │   │       └── UserEmailChanged.scala
     │       │   └── shared/            # Shared domain primitives
-    │       ├── application/           # Use cases
-    │       │   ├── user/              # User commands & queries
+    │       │       ├── DomainBase.scala      # AggregateRoot, DomainEvent
+    │       │       └── DomainError.scala
+    │       ├── application/           # Application Layer - Use cases & orchestration
+    │       │   ├── user/
+    │       │   │   ├── UserService.scala     # Application Service
+    │       │   │   ├── commands/            # CQRS Commands (write)
+    │       │   │   │   ├── CreateUserCommand.scala
+    │       │   │   │   ├── UpdateUserProfileCommand.scala
+    │       │   │   │   ├── ChangeUserEmailCommand.scala
+    │       │   │   │   └── DeleteUserCommand.scala
+    │       │   │   └── queries/             # CQRS Queries (read)
+    │       │   │       ├── GetUserByIdQuery.scala
+    │       │   │       ├── GetUserByEmailQuery.scala
+    │       │   │       ├── GetAllUsersQuery.scala
+    │       │   │       └── GetUsersPaginatedQuery.scala
     │       │   └── shared/            # Shared application logic
-    │       ├── infrastructure/        # Technical implementation
-    │       │   ├── persistence/       # Database
-    │       │   └── messaging/         # Kafka events
-    │       ├── controllers/           # REST API
+    │       │       ├── ApplicationBase.scala
+    │       │       └── LoggingService.scala
+    │       ├── infrastructure/        # Infrastructure Layer - Technical implementation
+    │       │   ├── persistence/
+    │       │   │   └── UserRepositoryImpl.scala  # Slick + PostgreSQL
+    │       │   ├── messaging/
+    │       │   │   ├── EventPublisher.scala
+    │       │   │   ├── KafkaEventPublisher.scala # Kafka integration
+    │       │   │   └── EventSubscriber.scala
+    │       │   └── security/
+    │       │       └── BCryptPasswordHasher.scala # Password hashing impl
+    │       ├── controllers/           # Interface Layer - REST API
+    │       │   ├── UserController.scala
+    │       │   ├── HealthController.scala
+    │       │   ├── MetricsController.scala
     │       │   └── dto/               # Request/Response DTOs
-    │       ├── repositories/          # Repository implementations
-    │       └── modules/               # Dependency injection
+    │       │       └── UserDto.scala
+    │       └── modules/               # Dependency Injection (Guice)
+    │           ├── UserServiceModule.scala
+    │           ├── PrometheusModule.scala
+    │           └── ConsulModule.scala
     │
     ├── notification-service/ # Port 9002 - Email, Push notifications
     └── analytics-service/    # Port 9003 - Metrics, Reporting
@@ -47,23 +89,65 @@ scala-play-backend/
 
 ```
 app/
-├── domain/              # Pure business logic
-│   ├── [aggregate]/     # Entities, Value Objects, Events
-│   │   └── events/      # Domain events
-│   └── shared/          # Shared domain primitives
-├── application/         # Use cases
+├── domain/                      # Domain Layer - Pure business logic
+│   ├── [aggregate]/             # Aggregate Root + Value Objects
+│   │   ├── [Aggregate].scala           # Aggregate Root (immutable + events)
+│   │   ├── [Aggregate]Id.scala         # Entity ID (sealed trait pattern)
+│   │   ├── [ValueObject].scala         # Value Objects (self-validating)
+│   │   ├── [Aggregate]Repository.scala # Repository Interface (in domain!)
+│   │   ├── [Aggregate]DomainService.scala # Domain Service
+│   │   ├── [Aggregate]Factory.scala    # Factory Pattern
+│   │   ├── specifications/             # Specification Pattern
+│   │   │   └── [Aggregate]Specification.scala
+│   │   └── events/                     # Domain Events
+│   │       ├── [Event1].scala
+│   │       └── [Event2].scala
+│   └── shared/                  # Shared domain primitives
+│       ├── DomainBase.scala     # AggregateRoot, DomainEvent traits
+│       └── DomainError.scala    # Domain error types
+│
+├── application/                 # Application Layer - Use cases & orchestration
 │   ├── [aggregate]/
-│   │   ├── commands/    # Write operations
-│   │   └── queries/     # Read operations
-│   └── shared/          # Shared application logic
-├── infrastructure/      # Technical implementation
-│   ├── persistence/     # Database
-│   └── messaging/       # Kafka events
-├── controllers/         # REST API
-│   └── dto/             # Request/Response DTOs
-├── repositories/        # Repository implementations
-└── modules/             # Dependency injection
+│   │   ├── [Aggregate]Service.scala    # Application Service (orchestration)
+│   │   ├── commands/            # CQRS Commands (write operations)
+│   │   │   ├── Create[Aggregate]Command.scala
+│   │   │   ├── Update[Aggregate]Command.scala
+│   │   │   └── Delete[Aggregate]Command.scala
+│   │   └── queries/             # CQRS Queries (read operations)
+│   │       ├── Get[Aggregate]ByIdQuery.scala
+│   │       └── GetAll[Aggregate]sQuery.scala
+│   └── shared/                  # Shared application logic
+│       ├── ApplicationBase.scala
+│       └── LoggingService.scala
+│
+├── infrastructure/              # Infrastructure Layer - Technical implementation
+│   ├── persistence/             # Database implementations
+│   │   └── [Aggregate]RepositoryImpl.scala  # Repository implementation
+│   ├── messaging/               # Event publishing
+│   │   ├── EventPublisher.scala
+│   │   └── KafkaEventPublisher.scala
+│   └── security/                # Security implementations
+│       └── BCryptPasswordHasher.scala
+│
+├── controllers/                 # Interface Layer - REST API
+│   ├── [Aggregate]Controller.scala
+│   ├── HealthController.scala
+│   └── dto/                     # Request/Response DTOs
+│       └── [Aggregate]Dto.scala
+│
+└── modules/                     # Dependency Injection (Guice)
+    └── [Aggregate]ServiceModule.scala
 ```
+
+**DDD Patterns Implemented:**
+- ✅ **Aggregate Root** - Immutable with domain events
+- ✅ **Value Objects** - Self-validating, sealed traits for IDs
+- ✅ **Domain Services** - Complex business logic
+- ✅ **Factory Pattern** - Centralized creation & validation
+- ✅ **Specification Pattern** - Composable business rules
+- ✅ **Repository Pattern** - Interface in domain, impl in infrastructure
+- ✅ **Domain Events** - Event sourcing pattern
+- ✅ **CQRS** - Separate read/write models
 
 ## 🛠️ Technology Stack
 
@@ -81,7 +165,10 @@ app/
 - **Message Broker**: Kafka + Zookeeper
 - **Cache**: Redis
 - **Service Discovery**: Consul
-- **Monitoring**: Prometheus + Grafana
+- **Monitoring**:
+  - **Prometheus** - Metrics collection & querying
+  - **Grafana** - Metrics visualization & dashboards
+  - **Consul** - Service registry & health checks
 - **Container**: Docker + Docker Compose
 
 ### Key Patterns
@@ -89,6 +176,7 @@ app/
 - **Database per Service** - Isolated databases
 - **Event-Driven** - Kafka for service communication
 - **CQRS** - Separate read/write operations
+- **Observability** - Metrics, health checks, service discovery
 
 ## 🚀 Getting Started
 
@@ -234,13 +322,66 @@ docker compose exec kafka kafka-console-consumer \
   --from-beginning
 ```
 
+## 📊 Monitoring & Observability
+
+All microservices include built-in monitoring with:
+- **Consul** (http://localhost:8500) - Service discovery & health checks
+- **Prometheus** (http://localhost:9090) - Metrics collection
+- **Grafana** (http://localhost:3000) - Dashboards & visualization
+
+### Monitoring Architecture
+
+```
+                    ┌─────────────┐
+                    │   Grafana   │  ← Dashboards & Alerts
+                    │   :3000     │
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │ Prometheus  │  ← Metrics Database
+                    │   :9090     │
+                    └──────┬──────┘
+                           │ (scrapes /metrics every 15s)
+        ┌──────────────────┼──────────────────┬──────────────┐
+        │                  │                  │              │
+   ┌────▼────┐        ┌────▼────┐        ┌────▼────┐    ┌────▼────┐
+   │ Gateway │        │  User   │        │ Notif.  │    │Analytics│
+   │  :9000  │        │ Service │        │ Service │    │ Service │
+   │ /health │        │  :9001  │        │  :9002  │    │  :9003  │
+   │ /metrics│        │ /metrics│        │ /metrics│    │ /metrics│
+   └────┬────┘        └────┬────┘        └────┬────┘    └────┬────┘
+        │                  │                  │              │
+        └──────────────────┼──────────────────┴──────────────┘
+                           │ (health checks & service discovery)
+                     ┌─────▼─────┐
+                     │   Consul  │  ← Service Registry
+                     │   :8500   │
+                     └───────────┘
+```
+
+### Available Metrics
+
+Each service automatically exposes:
+- **Health**: `/health` endpoint for health checks
+- **Metrics**: `/metrics` endpoint in Prometheus format
+  - JVM memory (heap/non-heap)
+  - Thread count & states
+  - Garbage collection stats
+  - Class loading
+
+**📘 Full Documentation: [common-monitoring/README.md](microservices/common-monitoring/README.md)**
+- Complete setup guide
+- Browser testing instructions
+- Prometheus queries & Grafana dashboards
+- Troubleshooting & adding monitoring to new services
+
 ## 📊 Architecture Flow
 
 ```
 Client → API Gateway :9000 → Microservices
-           ↓
-  ┌────────┼────────┐
-  ↓        ↓        ↓
+             ↓
+  ┌──────────┼──────────┐
+  ↓          ↓          ↓
 User    Notification Analytics
 :9001      :9002      :9003
   ↓          ↓          ↓

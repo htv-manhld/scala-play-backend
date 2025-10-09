@@ -1,4 +1,4 @@
-name := "api-gateway"
+name := "common-monitoring"
 
 version := "1.0-SNAPSHOT"
 
@@ -9,14 +9,13 @@ lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
       guice,
-      "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test,
-      "org.playframework" %% "play-json" % "3.0.4",
-      "org.playframework" %% "play-ws" % "3.0.4",
-      "org.playframework" %% "play-ahc-ws" % "3.0.4",
-      // Monitoring
+
+      // Prometheus Metrics
       "io.prometheus" % "simpleclient" % "0.16.0",
       "io.prometheus" % "simpleclient_hotspot" % "0.16.0",
       "io.prometheus" % "simpleclient_servlet" % "0.16.0",
+
+      // Consul Service Discovery
       "com.orbitz.consul" % "consul-client" % "1.5.3"
     )
   )

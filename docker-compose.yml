@@ -188,7 +188,7 @@ services:
       - /app/target
     command: sbt ~run
     ports:
-      - "9002:9002"
+      - "9002:9000"
     env_file:
       - ./microservices/notification-service/.env
     depends_on:
@@ -209,7 +209,7 @@ services:
       - /app/target
     command: sbt ~run
     ports:
-      - "9003:9003"
+      - "9003:9000"
     env_file:
       - ./microservices/analytics-service/.env
     depends_on:

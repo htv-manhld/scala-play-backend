@@ -6,6 +6,9 @@ GET     /                           controllers.HomeController.index()
 # Health check
 GET     /health                     controllers.HealthController.health()
 
+# Metrics for Prometheus
+GET     /metrics                    controllers.MetricsController.metrics()
+
 # User Service - Proxy all user-related requests
 GET     /api/users                  interfaces.rest.GatewayController.proxyToUserService(path = "")
 GET     /api/users/                 interfaces.rest.GatewayController.proxyToUserService(path = "")

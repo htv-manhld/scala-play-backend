@@ -18,23 +18,35 @@ trait AggregateRoot[ID <: EntityId[_]] {
   def id: ID
   def version: Long
 
-  private var _uncommittedEvents: List[DomainEvent] = List.empty
+  // Immutable events list - must be implemented by concrete aggregates
+  def uncommittedEvents: List[DomainEvent]
 
-  def addEvent(event: DomainEvent): this.type = {
-    _uncommittedEvents = _uncommittedEvents :+ event
-    this
+  // Return new instance with added event - immutable approach
+  protected def withEvent(event: DomainEvent): this.type
+  protected def withEvents(events: List[DomainEvent]): this.type
+  protected def withoutEvents(): this.type
+}
+
+// Mixin trait providing default implementation
+trait EventSourcedAggregate[ID <: EntityId[_]] extends AggregateRoot[ID] {
+  // Subclasses must provide this field
+  protected val _uncommittedEvents: List[DomainEvent] = List.empty
+
+  override def uncommittedEvents: List[DomainEvent] = _uncommittedEvents
+
+  // Helper methods for subclasses to use with copy()
+  protected def addEvent(event: DomainEvent)(implicit ev: this.type <:< Product): this.type = {
+    // This should be called like: copy(_uncommittedEvents = _uncommittedEvents :+ event).asInstanceOf[this.type]
+    // But we provide a cleaner interface
+    withEvent(event)
   }
 
-  def addEvents(events: List[DomainEvent]): this.type = {
-    _uncommittedEvents = _uncommittedEvents ++ events
-    this
+  protected def addEvents(events: List[DomainEvent])(implicit ev: this.type <:< Product): this.type = {
+    withEvents(events)
   }
 
-  def uncommittedEvents: List[DomainEvent] = _uncommittedEvents
-
-  def markEventsAsCommitted(): this.type = {
-    _uncommittedEvents = List.empty
-    this
+  def markEventsAsCommitted()(implicit ev: this.type <:< Product): this.type = {
+    withoutEvents()
   }
 }
 

@@ -3,6 +3,9 @@
 # Health check
 GET     /health                             controllers.HealthController.health()
 
+# Metrics for Prometheus
+GET     /metrics                            controllers.MetricsController.metrics()
+
 # Analytics endpoints
 GET     /api/analytics/metrics/user         controllers.AnalyticsController.getUserMetrics(startDate: Option[String] ?= None, endDate: Option[String] ?= None)
 GET     /api/analytics/metrics/system       controllers.AnalyticsController.getSystemMetrics()

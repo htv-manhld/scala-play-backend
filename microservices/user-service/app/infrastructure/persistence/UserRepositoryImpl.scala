@@ -6,7 +6,7 @@ import slick.jdbc.PostgresProfile.api._
 import java.time.{LocalDate, LocalDateTime}
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
-import domain.user.{User, UserId, Email, UserProfile, UserRepository, UserStatus}
+import domain.user.{User, UserId, NewUserId, PersistedUserId, Email, UserProfile, UserRepository, UserStatus}
 import domain.shared.{DomainError, PaginatedResponse, PaginationInfo}
 
 @Singleton
@@ -51,8 +51,8 @@ class UserRepositoryImpl @Inject()(
 
   // Conversion between domain User and UserRow
   private def toDomain(row: UserRow): User = {
-    User(
-      id = UserId(row.id),
+    User.reconstitute(
+      id = UserId.existing(row.id),
       email = Email(row.email),
       password = row.password,
       profile = UserProfile(row.name, row.birthdate),
@@ -67,7 +67,7 @@ class UserRepositoryImpl @Inject()(
 
   private def toRow(user: User): UserRow = {
     UserRow(
-      id = user.id.value,
+      id = user.id.value.getOrElse(0L), // 0 for new users, will be replaced by DB-generated ID
       name = user.profile.name,
       email = user.email.value,
       password = user.password,
@@ -81,10 +81,15 @@ class UserRepositoryImpl @Inject()(
   }
 
   override def findById(id: UserId): Future[Option[User]] = {
-    val query = users.filter(_.id === id.value)
-
-    db.run(query.result.headOption).map(_.map(toDomain)).recover {
-      case _ => None
+    id.value match {
+      case Some(idValue) =>
+        val query = users.filter(_.id === idValue)
+        db.run(query.result.headOption).map(_.map(toDomain)).recover {
+          case _ => None
+        }
+      case None =>
+        // NewUserId - not yet persisted, cannot find in DB
+        Future.successful(None)
     }
   }
 
@@ -134,73 +139,92 @@ class UserRepositoryImpl @Inject()(
   }
 
   override def save(user: User): Future[Either[DomainError, User]] = {
-    if (user.id.value == 0) {
-      // Create new user
-      val insertAction = (users returning users.map(_.id)) += toRow(user).copy(id = 0L)
+    user.id match {
+      case _: NewUserId =>
+        // Create new user
+        val insertAction = (users returning users.map(_.id)) += toRow(user).copy(id = 0L)
 
-      db.run(insertAction).map { generatedId =>
-        val savedUser = user.copy(id = UserId(generatedId))
-        // Preserve uncommitted events from original user
-        user.uncommittedEvents.foreach(event => savedUser.addEvent(event))
-        Right(savedUser)
-      }.recover {
-        case ex: java.sql.SQLException if ex.getMessage.contains("duplicate key") =>
-          Left(DomainError.DuplicateError("User with this email already exists"))
-        case ex: Exception =>
-          Left(DomainError.ValidationError(s"Database error: ${ex.getMessage}"))
-      }
-    } else {
-      // Update existing user
-      val updateAction = users
-        .filter(_.id === user.id.value)
-        .map(u => (u.name, u.email, u.password, u.status, u.birthdate, u.lastLoginAt, u.verifiedAt, u.updatedAt))
-        .update((
-          user.profile.name,
-          user.email.value,
-          user.password,
-          user.status.value,
-          user.profile.birthdate,
-          user.lastLoginAt,
-          user.verifiedAt,
-          LocalDateTime.now()
-        ))
-
-      db.run(updateAction).flatMap { rowsAffected =>
-        if (rowsAffected > 0) {
-          findById(user.id).map {
-            case Some(updatedUser) => Right(updatedUser)
-            case None => Left(DomainError.NotFound(s"User with id ${user.id.value} not found"))
-          }
-        } else {
-          Future.successful(Left(DomainError.NotFound(s"User with id ${user.id.value} not found")))
+        db.run(insertAction).map { generatedId =>
+          // Reconstitute user with generated ID, preserving uncommitted events
+          val savedUser = User.reconstitute(
+            id = UserId.existing(generatedId),
+            email = user.email,
+            password = user.password,
+            profile = user.profile,
+            status = user.status,
+            lastLoginAt = user.lastLoginAt,
+            verifiedAt = user.verifiedAt,
+            createdAt = user.createdAt,
+            updatedAt = user.updatedAt,
+            version = user.version
+          ).copy(_uncommittedEvents = user.uncommittedEvents)
+          Right(savedUser)
+        }.recover {
+          case ex: java.sql.SQLException if ex.getMessage.contains("duplicate key") =>
+            Left(DomainError.DuplicateError("User with this email already exists"))
+          case ex: Exception =>
+            Left(DomainError.ValidationError(s"Database error: ${ex.getMessage}"))
         }
-      }.recover {
-        case ex: java.sql.SQLException if ex.getMessage.contains("duplicate key") =>
-          Left(DomainError.DuplicateError("User with this email already exists"))
-        case ex: Exception =>
-          Left(DomainError.ValidationError(s"Database error: ${ex.getMessage}"))
-      }
+
+      case PersistedUserId(idValue) =>
+        // Update existing user
+        val updateAction = users
+          .filter(_.id === idValue)
+          .map(u => (u.name, u.email, u.password, u.status, u.birthdate, u.lastLoginAt, u.verifiedAt, u.updatedAt))
+          .update((
+            user.profile.name,
+            user.email.value,
+            user.password,
+            user.status.value,
+            user.profile.birthdate,
+            user.lastLoginAt,
+            user.verifiedAt,
+            LocalDateTime.now()
+          ))
+
+        db.run(updateAction).flatMap { rowsAffected =>
+          if (rowsAffected > 0) {
+            findById(user.id).map {
+              case Some(updatedUser) =>
+                // Preserve uncommitted events
+                Right(updatedUser.copy(_uncommittedEvents = user.uncommittedEvents))
+              case None => Left(DomainError.NotFound(s"User with id $idValue not found"))
+            }
+          } else {
+            Future.successful(Left(DomainError.NotFound(s"User with id $idValue not found")))
+          }
+        }.recover {
+          case ex: java.sql.SQLException if ex.getMessage.contains("duplicate key") =>
+            Left(DomainError.DuplicateError("User with this email already exists"))
+          case ex: Exception =>
+            Left(DomainError.ValidationError(s"Database error: ${ex.getMessage}"))
+        }
     }
   }
 
   override def delete(id: UserId): Future[Either[DomainError, Unit]] = {
-    val deleteAction = users.filter(_.id === id.value).delete
+    id.value match {
+      case Some(idValue) =>
+        val deleteAction = users.filter(_.id === idValue).delete
 
-    db.run(deleteAction).map { rowsAffected =>
-      if (rowsAffected > 0) {
-        Right(())
-      } else {
-        Left(DomainError.NotFound(s"User with id ${id.value} not found"))
-      }
-    }.recover {
-      case ex: Exception =>
-        Left(DomainError.ValidationError(s"Database error: ${ex.getMessage}"))
+        db.run(deleteAction).map { rowsAffected =>
+          if (rowsAffected > 0) {
+            Right(())
+          } else {
+            Left(DomainError.NotFound(s"User with id $idValue not found"))
+          }
+        }.recover {
+          case ex: Exception =>
+            Left(DomainError.ValidationError(s"Database error: ${ex.getMessage}"))
+        }
+      case None =>
+        // Cannot delete a user that doesn't exist in DB
+        Future.successful(Left(DomainError.NotFound("Cannot delete unsaved user")))
     }
   }
 
   override def nextIdentity(): Future[UserId] = {
-    // For PostgreSQL, we'll let the database generate the ID
-    // This is a placeholder - actual ID will be generated on insert
-    Future.successful(UserId(0L))
+    // Return a new UserId that will be replaced with DB-generated ID on insert
+    Future.successful(UserId.newUser())
   }
 }

@@ -13,12 +13,12 @@ scrape_configs:
 
   - job_name: "user-service"
     static_configs:
-      - targets: ["user-service:9001"]
+      - targets: ["user-service:9000"]
 
   - job_name: "notification-service"
     static_configs:
-      - targets: ["notification-service:9002"]
+      - targets: ["notification-service:9000"]
 
   - job_name: "analytics-service"
     static_configs:
-      - targets: ["analytics-service:9003"]
+      - targets: ["analytics-service:9000"]

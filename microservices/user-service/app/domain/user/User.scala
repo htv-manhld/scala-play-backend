@@ -1,14 +1,47 @@
 package domain.user
 
 import java.time.{LocalDate, LocalDateTime}
-import domain.shared.{AggregateRoot, EntityId, DomainError}
+import domain.shared.{AggregateRoot, EntityId, DomainError, DomainEvent}
 import domain.user.events.{UserCreated, UserProfileChanged, UserEmailChanged}
 import play.api.libs.json._
 
-case class UserId(value: Long) extends EntityId[Long]
+// Sealed trait to distinguish between new and persisted users
+sealed trait UserId extends EntityId[Option[Long]] {
+  def value: Option[Long]
+  def isNew: Boolean
+  def isPersisted: Boolean
+}
+
+case class NewUserId() extends UserId {
+  override val value: Option[Long] = None
+  override val isNew: Boolean = true
+  override val isPersisted: Boolean = false
+}
+
+case class PersistedUserId(id: Long) extends UserId {
+  override val value: Option[Long] = Some(id)
+  override val isNew: Boolean = false
+  override val isPersisted: Boolean = true
+}
 
 object UserId {
-  implicit val userIdFormat: Format[UserId] = Json.format[UserId]
+  def newUser(): UserId = NewUserId()
+  def existing(id: Long): UserId = PersistedUserId(id)
+
+  // For backward compatibility with repository queries
+  def fromLong(id: Long): UserId = PersistedUserId(id)
+
+  implicit val userIdFormat: Format[UserId] = Format(
+    Reads {
+      case JsNumber(value) => JsSuccess(PersistedUserId(value.toLong))
+      case JsNull => JsSuccess(NewUserId())
+      case _ => JsError("Invalid UserId format")
+    },
+    Writes {
+      case NewUserId() => JsNull
+      case PersistedUserId(id) => JsNumber(id)
+    }
+  )
 }
 
 case class Email(value: String) {
@@ -81,26 +114,44 @@ case class User(
   verifiedAt: Option[LocalDateTime] = None,
   createdAt: LocalDateTime,
   updatedAt: LocalDateTime,
-  version: Long = 0
+  version: Long = 0,
+  protected val _uncommittedEvents: List[DomainEvent] = List.empty
 ) extends AggregateRoot[UserId] {
 
+  // Immutable event handling
+  override def uncommittedEvents: List[DomainEvent] = _uncommittedEvents
+
+  override protected def withEvent(event: DomainEvent): this.type =
+    this.copy(_uncommittedEvents = _uncommittedEvents :+ event).asInstanceOf[this.type]
+
+  override protected def withEvents(events: List[DomainEvent]): this.type =
+    this.copy(_uncommittedEvents = _uncommittedEvents ++ events).asInstanceOf[this.type]
+
+  override protected def withoutEvents(): this.type =
+    this.copy(_uncommittedEvents = List.empty).asInstanceOf[this.type]
+
+  def markEventsAsCommitted(): User = withoutEvents()
+
+  // Business methods with immutable event handling
   def changeProfile(newProfile: UserProfile): User = {
-    val events = List(UserProfileChanged(id, profile, newProfile, LocalDateTime.now()))
+    val event = UserProfileChanged(id, profile, newProfile, LocalDateTime.now())
     this.copy(
       profile = newProfile,
       updatedAt = LocalDateTime.now(),
-      version = version + 1
-    ).addEvents(events)
+      version = version + 1,
+      _uncommittedEvents = _uncommittedEvents :+ event
+    )
   }
 
   def changeEmail(newEmail: Email): Either[DomainError, User] = {
     if (newEmail != email) {
-      val events = List(UserEmailChanged(id, email, newEmail, LocalDateTime.now()))
+      val event = UserEmailChanged(id, email, newEmail, LocalDateTime.now())
       Right(this.copy(
         email = newEmail,
         updatedAt = LocalDateTime.now(),
-        version = version + 1
-      ).addEvents(events))
+        version = version + 1,
+        _uncommittedEvents = _uncommittedEvents :+ event
+      ))
     } else {
       Left(DomainError.InvalidOperation("Email is the same as current email"))
     }
@@ -142,34 +193,36 @@ case class User(
 }
 
 object User {
+  /**
+   * Factory method for creating new users
+   * Delegates to UserFactory for full validation
+   */
   def create(
     email: Email,
     profile: UserProfile,
     password: Option[String] = None,
     status: UserStatus = UserStatus.Active
   ): Either[DomainError, User] = {
-    try {
-      val now = LocalDateTime.now()
-      val user = User(
-        id = UserId(0), // Will be set by repository
-        email = email,
-        password = password,
-        profile = profile,
-        status = status,
-        lastLoginAt = None,
-        verifiedAt = None,
-        createdAt = now,
-        updatedAt = now,
-        version = 0
-      )
+    UserFactory.createUser(email, profile, password, status)
+  }
 
-      val event = UserCreated(user.id, email, profile, now)
-      val userWithEvent = user.addEvent(event)
-
-      Right(userWithEvent)
-    } catch {
-      case ex: IllegalArgumentException => Left(DomainError.ValidationError(ex.getMessage))
-    }
+  /**
+   * Reconstitute a User from persistence
+   * Used by Repository when loading from database
+   */
+  def reconstitute(
+    id: UserId,
+    email: Email,
+    password: Option[String],
+    profile: UserProfile,
+    status: UserStatus,
+    lastLoginAt: Option[LocalDateTime],
+    verifiedAt: Option[LocalDateTime],
+    createdAt: LocalDateTime,
+    updatedAt: LocalDateTime,
+    version: Long
+  ): User = {
+    UserFactory.reconstitute(id, email, password, profile, status, lastLoginAt, verifiedAt, createdAt, updatedAt, version)
   }
 
   implicit val localDateTimeFormat: Format[LocalDateTime] = Format(
@@ -177,5 +230,35 @@ object User {
     Writes.of[String].contramap(_.toString)
   )
 
-  implicit val userFormat: Format[User] = Json.format[User]
+  // Custom JSON format excluding uncommitted events
+  implicit val userFormat: Format[User] = new Format[User] {
+    override def reads(json: JsValue): JsResult[User] = {
+      for {
+        id <- (json \ "id").validate[UserId]
+        email <- (json \ "email").validate[Email]
+        password <- (json \ "password").validateOpt[String]
+        profile <- (json \ "profile").validate[UserProfile]
+        status <- (json \ "status").validate[UserStatus]
+        lastLoginAt <- (json \ "lastLoginAt").validateOpt[LocalDateTime]
+        verifiedAt <- (json \ "verifiedAt").validateOpt[LocalDateTime]
+        createdAt <- (json \ "createdAt").validate[LocalDateTime]
+        updatedAt <- (json \ "updatedAt").validate[LocalDateTime]
+        version <- (json \ "version").validate[Long]
+      } yield User(id, email, password, profile, status, lastLoginAt, verifiedAt, createdAt, updatedAt, version)
+    }
+
+    override def writes(user: User): JsValue = Json.obj(
+      "id" -> user.id,
+      "email" -> user.email,
+      "password" -> user.password,
+      "profile" -> user.profile,
+      "status" -> user.status,
+      "lastLoginAt" -> user.lastLoginAt,
+      "verifiedAt" -> user.verifiedAt,
+      "createdAt" -> user.createdAt,
+      "updatedAt" -> user.updatedAt,
+      "version" -> user.version
+      // Excluding _uncommittedEvents from JSON
+    )
+  }
 }

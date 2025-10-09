@@ -79,7 +79,7 @@ class UserController @Inject()(
 
   // GET /api/users/:id
   def getUser(id: String): Action[AnyContent] = Action.async { implicit request =>
-    val query = GetUserByIdQuery(UserId(id.toLong))
+    val query = GetUserByIdQuery(UserId.existing(id.toLong))
 
     userService.handle(query).map {
       case Some(user) =>
@@ -210,7 +210,7 @@ class UserController @Inject()(
       case JsSuccess(dto, _) =>
         try {
           val command = UpdateUserProfileCommand(
-            userId = UserId(id.toLong),
+            userId = UserId.existing(id.toLong),
             name = dto.name,
             birthdate = dto.birthdate.map(java.time.LocalDate.parse)
           )
@@ -266,7 +266,7 @@ class UserController @Inject()(
       case JsSuccess(dto, _) =>
         try {
           val command = ChangeUserEmailCommand(
-            userId = UserId(id.toLong),
+            userId = UserId.existing(id.toLong),
             newEmail = Email(dto.email)
           )
 
@@ -318,7 +318,7 @@ class UserController @Inject()(
 
   // DELETE /api/users/:id
   def deleteUser(id: String): Action[AnyContent] = Action.async { implicit request =>
-    val command = DeleteUserCommand(UserId(id.toLong))
+    val command = DeleteUserCommand(UserId.existing(id.toLong))
 
     userService.handle(command).map {
       case Right(_) =>
