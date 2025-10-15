@@ -18,11 +18,16 @@ tags:
     description: User management endpoints
   - name: health
     description: Health check endpoints
+  - name: authentication
+    description: Authentication and authorization endpoints
+  - name: password-management
+    description: Password change and reset operations
 
 paths:
   /health:
     $ref: './paths/health.yaml'
 
+  # User Management
   /api/users:
     $ref: './paths/users.yaml#/~1api~1users'
 
@@ -38,8 +43,38 @@ paths:
   /api/users/{id}/email:
     $ref: './paths/users.yaml#/~1api~1users~1{id}~1email'
 
+  # Authentication
+  /api/auth/login:
+    $ref: './paths/auth.yaml#/~1api~1auth~1login'
+
+  /api/auth/verify:
+    $ref: './paths/auth.yaml#/~1api~1auth~1verify'
+
+  /api/auth/refresh:
+    $ref: './paths/auth.yaml#/~1api~1auth~1refresh'
+
+  /api/auth/logout:
+    $ref: './paths/auth.yaml#/~1api~1auth~1logout'
+
+  /api/auth/change-password:
+    $ref: './paths/auth.yaml#/~1api~1auth~1change-password'
+
+  /api/auth/forgot-password:
+    $ref: './paths/auth.yaml#/~1api~1auth~1forgot-password'
+
+  /api/auth/reset-password:
+    $ref: './paths/auth.yaml#/~1api~1auth~1reset-password'
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
   schemas:
+    # User Management
     User:
       $ref: './components/schemas.yaml#/User'
     CreateUserRequest:
@@ -59,7 +94,20 @@ components:
     ErrorResponse:
       $ref: './components/schemas.yaml#/ErrorResponse'
 
+    # Authentication
+    LoginRequest:
+      $ref: './components/schemas.yaml#/LoginRequest'
+    LoginData:
+      $ref: './components/schemas.yaml#/LoginData'
+    ChangePasswordRequest:
+      $ref: './components/schemas.yaml#/ChangePasswordRequest'
+    ForgotPasswordRequest:
+      $ref: './components/schemas.yaml#/ForgotPasswordRequest'
+    ResetPasswordRequest:
+      $ref: './components/schemas.yaml#/ResetPasswordRequest'
+
   responses:
+    # User Management
     GetUserResponse:
       $ref: './components/responses.yaml#/UserSuccessResponse'
     GetUsersResponse:
@@ -70,14 +118,34 @@ components:
       $ref: './components/responses.yaml#/UserCreatedResponse'
     DeleteUserResponse:
       $ref: './components/responses.yaml#/UserDeletedResponse'
+
+    # Authentication
+    LoginSuccessResponse:
+      $ref: './components/responses.yaml#/LoginSuccessResponse'
+    VerifyTokenResponse:
+      $ref: './components/responses.yaml#/VerifyTokenResponse'
+    LogoutSuccessResponse:
+      $ref: './components/responses.yaml#/LogoutSuccessResponse'
+    ChangePasswordSuccessResponse:
+      $ref: './components/responses.yaml#/ChangePasswordSuccessResponse'
+    ForgotPasswordSuccessResponse:
+      $ref: './components/responses.yaml#/ForgotPasswordSuccessResponse'
+    ResetPasswordSuccessResponse:
+      $ref: './components/responses.yaml#/ResetPasswordSuccessResponse'
+
+    # Error Responses
     BadRequestErrorResponse:
       $ref: './components/responses.yaml#/BadRequestError'
+    UnauthorizedErrorResponse:
+      $ref: './components/responses.yaml#/UnauthorizedError'
     NotFoundErrorResponse:
       $ref: './components/responses.yaml#/NotFoundError'
     ConflictErrorResponse:
       $ref: './components/responses.yaml#/ConflictError'
     InternalServerErrorResponse:
       $ref: './components/responses.yaml#/InternalServerError'
+
+    # Health Check
     HealthCheckApiResponse:
       $ref: './components/responses.yaml#/HealthCheckResponse'
 

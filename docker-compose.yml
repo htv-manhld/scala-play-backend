@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # Infrastructure services - Separate databases per service
   user-db:
@@ -157,12 +155,12 @@ services:
 
   user-service:
     build:
-      context: ./microservices/user-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: microservices/user-service/Dockerfile
     container_name: microservices-user-service
     volumes:
-      - ./microservices/user-service:/app
-      - /app/target
+      - ./microservices/user-service:/workspace/user-service
+      - /workspace/user-service/target
     command: sbt ~run
     ports:
       - "9001:9000"

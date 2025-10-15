@@ -16,6 +16,10 @@ tags:
     description: User management endpoints
   - name: health
     description: Health check endpoints
+  - name: authentication
+    description: Authentication and authorization endpoints
+  - name: password-management
+    description: Password change and reset operations
 paths:
   /health:
     get:
@@ -170,7 +174,189 @@ paths:
           $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /api/auth/login:
+    post:
+      tags:
+        - authentication
+      summary: User login
+      description: Authenticate user with email and password, returns JWT token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              validLogin:
+                summary: Valid login credentials
+                value:
+                  email: admin@gmail.com
+                  password: Admin@123
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/auth/verify:
+    get:
+      tags:
+        - authentication
+      summary: Verify JWT token
+      description: Verify if the provided JWT token is valid and return user information
+      operationId: verifyToken
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/VerifyTokenResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/auth/refresh:
+    post:
+      tags:
+        - authentication
+      summary: Refresh JWT token
+      description: Generate a new JWT token from an existing valid token
+      operationId: refreshToken
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginSuccessResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/auth/logout:
+    post:
+      tags:
+        - authentication
+      summary: Logout user
+      description: Blacklist the current JWT token to prevent further use
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/LogoutSuccessResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/auth/change-password:
+    put:
+      tags:
+        - password-management
+      summary: Change password
+      description: |
+        Change user password. Requires old password verification.
+        After successful password change, the current token is blacklisted and user must login again.
+      operationId: changePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            examples:
+              validRequest:
+                summary: Valid password change request
+                value:
+                  oldPassword: OldPassword123!
+                  newPassword: NewPassword123!
+      responses:
+        '200':
+          $ref: '#/components/responses/ChangePasswordSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/auth/forgot-password:
+    post:
+      tags:
+        - password-management
+      summary: Request password reset
+      description: |
+        Request a password reset link. If the email exists in the system, a reset token will be generated
+        and sent via email. Returns generic success message for security reasons.
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            examples:
+              withDefaultUrl:
+                summary: With default reset URL
+                value:
+                  email: admin@gmail.com
+              withCustomUrl:
+                summary: With custom reset URL
+                value:
+                  email: admin@gmail.com
+                  resetUrl: https://myapp.com/reset-password
+      responses:
+        '200':
+          $ref: '#/components/responses/ForgotPasswordSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/auth/reset-password:
+    post:
+      tags:
+        - password-management
+      summary: Reset password with token
+      description: |
+        Reset password using the token received via email. The token is valid for 1 hour
+        and can only be used once.
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            examples:
+              validRequest:
+                summary: Valid reset request
+                value:
+                  token: fFzw791jCP_vfVFn_NNj5DF68pw9egrkbeKTTIWaW-c
+                  newPassword: NewPassword123!
+      responses:
+        '200':
+          $ref: '#/components/responses/ResetPasswordSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
   schemas:
     User:
       type: object
@@ -261,18 +447,18 @@ components:
           examples:
             - John Doe
         password:
-          type:
-            - string
-            - 'null'
-          format: password
+          oneOf:
+            - type: string
+              format: password
+            - type: 'null'
           description: User password (optional)
           examples:
             - SecurePass123!
         birthdate:
-          type:
-            - string
-            - 'null'
-          format: date
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
           description: User birthdate (optional)
           examples:
             - '1990-01-15'
@@ -288,10 +474,10 @@ components:
           examples:
             - John Doe
         birthdate:
-          type:
-            - string
-            - 'null'
-          format: date
+          oneOf:
+            - type: string
+              format: date
+            - type: 'null'
           description: User birthdate (optional)
           examples:
             - '1990-01-15'
@@ -421,6 +607,102 @@ components:
             - USER_NOT_FOUND
           examples:
             - USER_NOT_FOUND
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          examples:
+            - admin@gmail.com
+        password:
+          type: string
+          format: password
+          description: User password
+          minLength: 6
+          examples:
+            - Admin@123
+    LoginData:
+      type: object
+      required:
+        - user
+        - token
+        - expiresAt
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT access token
+          examples:
+            - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbkBnbWFpbC5jb20iLCJpYXQiOjE3NjA0OTM4ODIsImV4cCI6MTc2MDU4MDI4Mn0.JoVgK8xIwBniSMIyr8S4wl4-yC86VKJBfixa-hIs2WQ
+        expiresAt:
+          type: string
+          format: date-time
+          description: Token expiration timestamp
+          examples:
+            - '2025-10-16T02:04:42.036492423'
+    ChangePasswordRequest:
+      type: object
+      required:
+        - oldPassword
+        - newPassword
+      properties:
+        oldPassword:
+          type: string
+          format: password
+          description: Current password
+          minLength: 6
+          examples:
+            - OldPassword123!
+        newPassword:
+          type: string
+          format: password
+          description: New password
+          minLength: 6
+          examples:
+            - NewPassword123!
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          examples:
+            - admin@gmail.com
+        resetUrl:
+          oneOf:
+            - type: string
+              format: uri
+            - type: 'null'
+          description: Custom reset URL (optional, defaults to http://localhost:3000/reset-password)
+          examples:
+            - https://myapp.com/reset-password
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - newPassword
+      properties:
+        token:
+          type: string
+          description: Password reset token received via email
+          examples:
+            - fFzw791jCP_vfVFn_NNj5DF68pw9egrkbeKTTIWaW-c
+        newPassword:
+          type: string
+          format: password
+          description: New password
+          minLength: 6
+          examples:
+            - NewPassword123!
   responses:
     GetUserResponse:
       $ref: '#/components/responses/UserSuccessResponse'
@@ -432,8 +714,142 @@ components:
       $ref: '#/components/responses/UserCreatedResponse'
     DeleteUserResponse:
       $ref: '#/components/responses/UserDeletedResponse'
+    LoginSuccessResponse:
+      description: Login successful
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - data
+              - message
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - true
+              data:
+                $ref: '#/components/schemas/LoginData'
+              message:
+                type: string
+                examples:
+                  - Login successful
+          examples:
+            success:
+              summary: Successful login
+              value:
+                success: true
+                data:
+                  user:
+                    id: 1
+                    email: admin@gmail.com
+                    name: Admin User
+                    birthdate: '1990-01-01'
+                    status: 1
+                    lastLoginAt: '2025-10-15T02:04:42.046852'
+                    createdAt: '2025-10-14T04:03:07.874711'
+                    updatedAt: '2025-10-15T02:04:42.057310'
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  expiresAt: '2025-10-16T02:04:42.036492423'
+                message: Login successful
+    VerifyTokenResponse:
+      description: Token is valid
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - data
+              - message
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - true
+              data:
+                $ref: '#/components/schemas/User'
+              message:
+                type: string
+                examples:
+                  - Token is valid
+    LogoutSuccessResponse:
+      description: Logged out successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - message
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - true
+              message:
+                type: string
+                examples:
+                  - Logged out successfully
+    ChangePasswordSuccessResponse:
+      description: Password changed successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - message
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - true
+              message:
+                type: string
+                examples:
+                  - Password changed successfully. Please login again.
+    ForgotPasswordSuccessResponse:
+      description: Password reset request processed
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - message
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - true
+              message:
+                type: string
+                examples:
+                  - If your email exists in our system, you will receive a password reset link
+    ResetPasswordSuccessResponse:
+      description: Password reset successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - message
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - true
+              message:
+                type: string
+                examples:
+                  - Password reset successfully. You can now login with your new password.
     BadRequestErrorResponse:
       $ref: '#/components/responses/BadRequestError'
+    UnauthorizedErrorResponse:
+      $ref: '#/components/responses/UnauthorizedError'
     NotFoundErrorResponse:
       $ref: '#/components/responses/NotFoundError'
     ConflictErrorResponse:
@@ -516,6 +932,40 @@ components:
                 type: string
                 examples:
                   - User deleted successfully
+    UnauthorizedError:
+      description: Authentication failed or invalid credentials
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - message
+            properties:
+              success:
+                type: boolean
+                examples:
+                  - false
+              message:
+                type: string
+                examples:
+                  - Invalid email or password
+          examples:
+            invalidCredentials:
+              summary: Invalid credentials
+              value:
+                success: false
+                message: Invalid email or password
+            invalidToken:
+              summary: Invalid token
+              value:
+                success: false
+                message: Invalid or expired token
+            missingToken:
+              summary: Missing authorization header
+              value:
+                success: false
+                message: Missing or invalid Authorization header
   parameters:
     UserId:
       name: id

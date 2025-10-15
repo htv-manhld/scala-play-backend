@@ -5,6 +5,15 @@ GET     /health                     controllers.HealthController.health()
 # Metrics for Prometheus
 GET     /metrics                    controllers.MetricsController.metrics()
 
+# Authentication API endpoints
+POST    /api/auth/login             controllers.AuthController.login()
+GET     /api/auth/verify            controllers.AuthController.verifyToken()
+POST    /api/auth/refresh           controllers.AuthController.refreshToken()
+POST    /api/auth/logout            controllers.AuthController.logout()
+PUT     /api/auth/change-password   controllers.AuthController.changePassword()
+POST    /api/auth/forgot-password   controllers.AuthController.forgotPassword()
+POST    /api/auth/reset-password    controllers.AuthController.resetPassword()
+
 # User API endpoints
 GET     /api/users                  controllers.UserController.getAllUsers(limit: Int ?= 10000)
 GET     /api/users/paginated        controllers.UserController.getUsersPaginated(page: Int ?= 0, size: Int ?= 20)

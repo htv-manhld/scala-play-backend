@@ -9,6 +9,12 @@ GET     /health                     controllers.HealthController.health()
 # Metrics for Prometheus
 GET     /metrics                    controllers.MetricsController.metrics()
 
+# Authentication - Proxy to User Service (direct proxy without prefix)
+POST    /api/auth/*path             interfaces.rest.GatewayController.proxyToAuthService(path)
+GET     /api/auth/*path             interfaces.rest.GatewayController.proxyToAuthService(path)
+PUT     /api/auth/*path             interfaces.rest.GatewayController.proxyToAuthService(path)
+DELETE  /api/auth/*path             interfaces.rest.GatewayController.proxyToAuthService(path)
+
 # User Service - Proxy all user-related requests
 GET     /api/users                  interfaces.rest.GatewayController.proxyToUserService(path = "")
 GET     /api/users/                 interfaces.rest.GatewayController.proxyToUserService(path = "")

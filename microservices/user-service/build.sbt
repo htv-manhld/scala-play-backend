@@ -17,6 +17,8 @@ lazy val root = (project in file("."))
       "org.playframework" %% "play-ws" % "3.0.4",
       "org.apache.kafka" % "kafka-clients" % "3.6.1",
       "org.mindrot" % "jbcrypt" % "0.4",
+      // JWT Authentication
+      "com.auth0" % "java-jwt" % "4.4.0",
       // Monitoring
       "io.prometheus" % "simpleclient" % "0.16.0",
       "io.prometheus" % "simpleclient_hotspot" % "0.16.0",

@@ -81,3 +81,177 @@ HealthCheckResponse:
             type: string
             examples:
               - ok
+
+# Authentication Responses
+LoginSuccessResponse:
+  description: Login successful
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - success
+          - data
+          - message
+        properties:
+          success:
+            type: boolean
+            examples:
+              - true
+          data:
+            $ref: './schemas.yaml#/LoginData'
+          message:
+            type: string
+            examples:
+              - Login successful
+      examples:
+        success:
+          summary: Successful login
+          value:
+            success: true
+            data:
+              user:
+                id: 1
+                email: admin@gmail.com
+                name: Admin User
+                birthdate: "1990-01-01"
+                status: 1
+                lastLoginAt: "2025-10-15T02:04:42.046852"
+                createdAt: "2025-10-14T04:03:07.874711"
+                updatedAt: "2025-10-15T02:04:42.057310"
+              token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+              expiresAt: "2025-10-16T02:04:42.036492423"
+            message: Login successful
+
+VerifyTokenResponse:
+  description: Token is valid
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - success
+          - data
+          - message
+        properties:
+          success:
+            type: boolean
+            examples:
+              - true
+          data:
+            $ref: './schemas.yaml#/User'
+          message:
+            type: string
+            examples:
+              - Token is valid
+
+LogoutSuccessResponse:
+  description: Logged out successfully
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - success
+          - message
+        properties:
+          success:
+            type: boolean
+            examples:
+              - true
+          message:
+            type: string
+            examples:
+              - Logged out successfully
+
+ChangePasswordSuccessResponse:
+  description: Password changed successfully
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - success
+          - message
+        properties:
+          success:
+            type: boolean
+            examples:
+              - true
+          message:
+            type: string
+            examples:
+              - Password changed successfully. Please login again.
+
+ForgotPasswordSuccessResponse:
+  description: Password reset request processed
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - success
+          - message
+        properties:
+          success:
+            type: boolean
+            examples:
+              - true
+          message:
+            type: string
+            examples:
+              - If your email exists in our system, you will receive a password reset link
+
+ResetPasswordSuccessResponse:
+  description: Password reset successfully
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - success
+          - message
+        properties:
+          success:
+            type: boolean
+            examples:
+              - true
+          message:
+            type: string
+            examples:
+              - Password reset successfully. You can now login with your new password.
+
+UnauthorizedError:
+  description: Authentication failed or invalid credentials
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+          - success
+          - message
+        properties:
+          success:
+            type: boolean
+            examples:
+              - false
+          message:
+            type: string
+            examples:
+              - Invalid email or password
+      examples:
+        invalidCredentials:
+          summary: Invalid credentials
+          value:
+            success: false
+            message: Invalid email or password
+        invalidToken:
+          summary: Invalid token
+          value:
+            success: false
+            message: Invalid or expired token
+        missingToken:
+          summary: Missing authorization header
+          value:
+            success: false
+            message: Missing or invalid Authorization header

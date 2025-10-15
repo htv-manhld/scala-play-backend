@@ -1,0 +1,182 @@
+/api/auth/login:
+  post:
+    tags:
+      - authentication
+    summary: User login
+    description: Authenticate user with email and password, returns JWT token
+    operationId: login
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/LoginRequest'
+          examples:
+            validLogin:
+              summary: Valid login credentials
+              value:
+                email: admin@gmail.com
+                password: Admin@123
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/LoginSuccessResponse'
+      '400':
+        $ref: '../components/responses.yaml#/BadRequestError'
+      '401':
+        $ref: '../components/responses.yaml#/UnauthorizedError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/auth/verify:
+  get:
+    tags:
+      - authentication
+    summary: Verify JWT token
+    description: Verify if the provided JWT token is valid and return user information
+    operationId: verifyToken
+    security:
+      - BearerAuth: []
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/VerifyTokenResponse'
+      '401':
+        $ref: '../components/responses.yaml#/UnauthorizedError'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/auth/refresh:
+  post:
+    tags:
+      - authentication
+    summary: Refresh JWT token
+    description: Generate a new JWT token from an existing valid token
+    operationId: refreshToken
+    security:
+      - BearerAuth: []
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/LoginSuccessResponse'
+      '401':
+        $ref: '../components/responses.yaml#/UnauthorizedError'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/auth/logout:
+  post:
+    tags:
+      - authentication
+    summary: Logout user
+    description: Blacklist the current JWT token to prevent further use
+    operationId: logout
+    security:
+      - BearerAuth: []
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/LogoutSuccessResponse'
+      '401':
+        $ref: '../components/responses.yaml#/UnauthorizedError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/auth/change-password:
+  put:
+    tags:
+      - password-management
+    summary: Change password
+    description: |
+      Change user password. Requires old password verification.
+      After successful password change, the current token is blacklisted and user must login again.
+    operationId: changePassword
+    security:
+      - BearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/ChangePasswordRequest'
+          examples:
+            validRequest:
+              summary: Valid password change request
+              value:
+                oldPassword: OldPassword123!
+                newPassword: NewPassword123!
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/ChangePasswordSuccessResponse'
+      '400':
+        $ref: '../components/responses.yaml#/BadRequestError'
+      '401':
+        $ref: '../components/responses.yaml#/UnauthorizedError'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/auth/forgot-password:
+  post:
+    tags:
+      - password-management
+    summary: Request password reset
+    description: |
+      Request a password reset link. If the email exists in the system, a reset token will be generated
+      and sent via email. Returns generic success message for security reasons.
+    operationId: forgotPassword
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/ForgotPasswordRequest'
+          examples:
+            withDefaultUrl:
+              summary: With default reset URL
+              value:
+                email: admin@gmail.com
+            withCustomUrl:
+              summary: With custom reset URL
+              value:
+                email: admin@gmail.com
+                resetUrl: https://myapp.com/reset-password
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/ForgotPasswordSuccessResponse'
+      '400':
+        $ref: '../components/responses.yaml#/BadRequestError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'
+
+/api/auth/reset-password:
+  post:
+    tags:
+      - password-management
+    summary: Reset password with token
+    description: |
+      Reset password using the token received via email. The token is valid for 1 hour
+      and can only be used once.
+    operationId: resetPassword
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/ResetPasswordRequest'
+          examples:
+            validRequest:
+              summary: Valid reset request
+              value:
+                token: fFzw791jCP_vfVFn_NNj5DF68pw9egrkbeKTTIWaW-c
+                newPassword: NewPassword123!
+    responses:
+      '200':
+        $ref: '../components/responses.yaml#/ResetPasswordSuccessResponse'
+      '400':
+        $ref: '../components/responses.yaml#/BadRequestError'
+      '404':
+        $ref: '../components/responses.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses.yaml#/InternalServerError'

@@ -11,17 +11,17 @@ COPY build.sbt ./
 COPY project ./project
 
 # Copy all services for multi-module build
-COPY common-monitoring ./common-monitoring
-COPY user-service ./user-service
-COPY notification-service ./notification-service
-COPY analytics-service ./analytics-service
-COPY api-gateway ./api-gateway
+COPY microservices/common-monitoring ./common-monitoring
+COPY microservices/user-service ./user-service
+COPY microservices/notification-service ./notification-service
+COPY microservices/analytics-service ./analytics-service
+COPY microservices/api-gateway ./api-gateway
 
 # Download dependencies
 RUN sbt update
 
 # Copy migration scripts
-COPY user-service/scripts/migrate.sh /usr/local/bin/migrate
+COPY microservices/user-service/scripts/migrate.sh /usr/local/bin/migrate
 RUN chmod +x /usr/local/bin/migrate
 
 WORKDIR /workspace/user-service

@@ -59,4 +59,5 @@ object DomainError {
   case class NotFound(message: String) extends DomainError
   case class InvalidOperation(message: String) extends DomainError
   case class DuplicateError(message: String) extends DomainError
+  case class AuthenticationFailed(message: String) extends DomainError
 }

@@ -253,3 +253,105 @@ ErrorResponse:
         - USER_NOT_FOUND
       examples:
         - USER_NOT_FOUND
+
+# Authentication Schemas
+LoginRequest:
+  type: object
+  required:
+    - email
+    - password
+  properties:
+    email:
+      type: string
+      format: email
+      description: User email address
+      examples:
+        - admin@gmail.com
+    password:
+      type: string
+      format: password
+      description: User password
+      minLength: 6
+      examples:
+        - Admin@123
+
+LoginData:
+  type: object
+  required:
+    - user
+    - token
+    - expiresAt
+  properties:
+    user:
+      $ref: './schemas.yaml#/User'
+    token:
+      type: string
+      description: JWT access token
+      examples:
+        - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbkBnbWFpbC5jb20iLCJpYXQiOjE3NjA0OTM4ODIsImV4cCI6MTc2MDU4MDI4Mn0.JoVgK8xIwBniSMIyr8S4wl4-yC86VKJBfixa-hIs2WQ
+    expiresAt:
+      type: string
+      format: date-time
+      description: Token expiration timestamp
+      examples:
+        - "2025-10-16T02:04:42.036492423"
+
+ChangePasswordRequest:
+  type: object
+  required:
+    - oldPassword
+    - newPassword
+  properties:
+    oldPassword:
+      type: string
+      format: password
+      description: Current password
+      minLength: 6
+      examples:
+        - OldPassword123!
+    newPassword:
+      type: string
+      format: password
+      description: New password
+      minLength: 6
+      examples:
+        - NewPassword123!
+
+ForgotPasswordRequest:
+  type: object
+  required:
+    - email
+  properties:
+    email:
+      type: string
+      format: email
+      description: User email address
+      examples:
+        - admin@gmail.com
+    resetUrl:
+      oneOf:
+        - type: string
+          format: uri
+        - type: "null"
+      description: Custom reset URL (optional, defaults to http://localhost:3000/reset-password)
+      examples:
+        - https://myapp.com/reset-password
+
+ResetPasswordRequest:
+  type: object
+  required:
+    - token
+    - newPassword
+  properties:
+    token:
+      type: string
+      description: Password reset token received via email
+      examples:
+        - fFzw791jCP_vfVFn_NNj5DF68pw9egrkbeKTTIWaW-c
+    newPassword:
+      type: string
+      format: password
+      description: New password
+      minLength: 6
+      examples:
+        - NewPassword123!
