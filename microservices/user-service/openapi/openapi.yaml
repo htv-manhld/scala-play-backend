@@ -160,3 +160,17 @@ components:
       $ref: './components/parameters.yaml#/PageQuery'
     SizeQuery:
       $ref: './components/parameters.yaml#/SizeQuery'
+    SearchQuery:
+      $ref: './components/parameters.yaml#/SearchQuery'
+    OrderByQuery:
+      $ref: './components/parameters.yaml#/OrderByQuery'
+    OrderDirectionQuery:
+      $ref: './components/parameters.yaml#/OrderDirectionQuery'
+    IgnoreIdQuery:
+      $ref: './components/parameters.yaml#/IgnoreIdQuery'
+    StatusQuery:
+      $ref: './components/parameters.yaml#/StatusQuery'
+    CreatedFromQuery:
+      $ref: './components/parameters.yaml#/CreatedFromQuery'
+    CreatedToQuery:
+      $ref: './components/parameters.yaml#/CreatedToQuery'

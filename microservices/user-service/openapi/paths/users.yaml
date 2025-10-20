@@ -3,10 +3,17 @@
     tags:
       - users
     summary: Get all users
-    description: Retrieve all users with optional limit
+    description: Retrieve all users with optional filtering, sorting, and limit
     operationId: getAllUsers
     parameters:
       - $ref: '../components/parameters.yaml#/LimitQuery'
+      - $ref: '../components/parameters.yaml#/SearchQuery'
+      - $ref: '../components/parameters.yaml#/OrderByQuery'
+      - $ref: '../components/parameters.yaml#/OrderDirectionQuery'
+      - $ref: '../components/parameters.yaml#/IgnoreIdQuery'
+      - $ref: '../components/parameters.yaml#/StatusQuery'
+      - $ref: '../components/parameters.yaml#/CreatedFromQuery'
+      - $ref: '../components/parameters.yaml#/CreatedToQuery'
     responses:
       '200':
         $ref: '../components/responses.yaml#/UsersSuccessResponse'
@@ -40,11 +47,18 @@
     tags:
       - users
     summary: Get users with pagination
-    description: Retrieve users with pagination support
+    description: Retrieve users with pagination, filtering, and sorting support
     operationId: getUsersPaginated
     parameters:
       - $ref: '../components/parameters.yaml#/PageQuery'
       - $ref: '../components/parameters.yaml#/SizeQuery'
+      - $ref: '../components/parameters.yaml#/SearchQuery'
+      - $ref: '../components/parameters.yaml#/OrderByQuery'
+      - $ref: '../components/parameters.yaml#/OrderDirectionQuery'
+      - $ref: '../components/parameters.yaml#/IgnoreIdQuery'
+      - $ref: '../components/parameters.yaml#/StatusQuery'
+      - $ref: '../components/parameters.yaml#/CreatedFromQuery'
+      - $ref: '../components/parameters.yaml#/CreatedToQuery'
     responses:
       '200':
         $ref: '../components/responses.yaml#/PaginatedUsersResponse'

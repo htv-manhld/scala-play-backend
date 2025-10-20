@@ -35,11 +35,30 @@ class UserService @Inject()(
   }
 
   def handle(query: GetAllUsersQuery): Future[Seq[User]] = {
-    userRepository.findAll(query.limit)
+    userRepository.findAll(
+      query.limit,
+      query.search,
+      query.orderBy,
+      query.orderDirection,
+      query.ignoreId,
+      query.status,
+      query.createdFrom,
+      query.createdTo
+    )
   }
 
   def handle(query: GetUsersPaginatedQuery): Future[PaginatedResponse[User]] = {
-    userRepository.findAllPaginated(query.page, query.size)
+    userRepository.findAllPaginated(
+      query.page,
+      query.size,
+      query.search,
+      query.orderBy,
+      query.orderDirection,
+      query.ignoreId,
+      query.status,
+      query.createdFrom,
+      query.createdTo
+    )
   }
 
   // Command operations (Write)

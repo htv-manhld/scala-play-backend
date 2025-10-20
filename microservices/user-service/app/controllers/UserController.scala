@@ -24,8 +24,17 @@ class UserController @Inject()(
   }
 
   // GET /api/users
-  def getAllUsers(limit: Int): Action[AnyContent] = Action.async { implicit request =>
-    val query = GetAllUsersQuery(limit)
+  def getAllUsers(
+    limit: Int,
+    search: Option[String],
+    orderBy: Option[String],
+    orderDirection: Option[String],
+    ignoreId: Option[Long],
+    status: Option[Int],
+    createdFrom: Option[String],
+    createdTo: Option[String]
+  ): Action[AnyContent] = Action.async { implicit request =>
+    val query = GetAllUsersQuery(limit, search, orderBy, orderDirection, ignoreId, status, createdFrom, createdTo)
 
     userService.handle(query).map { users =>
       val usersDto = users.map(UserResponseDto.fromDomain)
@@ -48,8 +57,18 @@ class UserController @Inject()(
   }
 
   // GET /api/users/paginated
-  def getUsersPaginated(page: Int, size: Int): Action[AnyContent] = Action.async { implicit request =>
-    val query = GetUsersPaginatedQuery(page, size)
+  def getUsersPaginated(
+    page: Int,
+    size: Int,
+    search: Option[String],
+    orderBy: Option[String],
+    orderDirection: Option[String],
+    ignoreId: Option[Long],
+    status: Option[Int],
+    createdFrom: Option[String],
+    createdTo: Option[String]
+  ): Action[AnyContent] = Action.async { implicit request =>
+    val query = GetUsersPaginatedQuery(page, size, search, orderBy, orderDirection, ignoreId, status, createdFrom, createdTo)
 
     userService.handle(query).map { paginatedResult =>
       val usersDto = paginatedResult.data.map(UserResponseDto.fromDomain)

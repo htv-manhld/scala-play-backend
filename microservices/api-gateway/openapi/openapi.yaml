@@ -35,10 +35,17 @@ paths:
       tags:
         - users
       summary: Get all users
-      description: Retrieve all users with optional limit
+      description: Retrieve all users with optional filtering, sorting, and limit
       operationId: getAllUsers
       parameters:
         - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/OrderByQuery'
+        - $ref: '#/components/parameters/OrderDirectionQuery'
+        - $ref: '#/components/parameters/IgnoreIdQuery'
+        - $ref: '#/components/parameters/StatusQuery'
+        - $ref: '#/components/parameters/CreatedFromQuery'
+        - $ref: '#/components/parameters/CreatedToQuery'
       responses:
         '200':
           $ref: '#/components/responses/UsersSuccessResponse'
@@ -70,11 +77,18 @@ paths:
       tags:
         - users
       summary: Get users with pagination
-      description: Retrieve users with pagination support
+      description: Retrieve users with pagination, filtering, and sorting support
       operationId: getUsersPaginated
       parameters:
         - $ref: '#/components/parameters/PageQuery'
         - $ref: '#/components/parameters/SizeQuery'
+        - $ref: '#/components/parameters/SearchQuery'
+        - $ref: '#/components/parameters/OrderByQuery'
+        - $ref: '#/components/parameters/OrderDirectionQuery'
+        - $ref: '#/components/parameters/IgnoreIdQuery'
+        - $ref: '#/components/parameters/StatusQuery'
+        - $ref: '#/components/parameters/CreatedFromQuery'
+        - $ref: '#/components/parameters/CreatedToQuery'
       responses:
         '200':
           $ref: '#/components/responses/PaginatedUsersResponse'
@@ -1011,4 +1025,106 @@ components:
         default: 20
         minimum: 1
         maximum: 100
+    SearchQuery:
+      name: search
+      in: query
+      description: Search term to filter users by ID, name, or email (case-insensitive). If the search term is a valid number, it will also search by user ID.
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      examples:
+        byName:
+          value: john
+          summary: Search by name
+        byEmail:
+          value: gmail.com
+          summary: Search by email domain
+        byId:
+          value: '5'
+          summary: Search by user ID
+    OrderByQuery:
+      name: orderBy
+      in: query
+      description: Field to sort by
+      required: false
+      schema:
+        type: string
+        enum:
+          - id
+          - name
+          - email
+          - status
+          - createdAt
+          - updatedAt
+        default: id
+      example: name
+    OrderDirectionQuery:
+      name: orderDirection
+      in: query
+      description: Sort direction
+      required: false
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        default: asc
+      example: asc
+    IgnoreIdQuery:
+      name: ignoreId
+      in: query
+      description: User ID to exclude from results (useful for excluding current logged-in user)
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      example: 5
+    StatusQuery:
+      name: status
+      in: query
+      description: Filter users by status (0 = Inactive, 1 = Active)
+      required: false
+      schema:
+        type: integer
+        enum:
+          - 0
+          - 1
+      examples:
+        active:
+          value: 1
+          summary: Filter active users only
+        inactive:
+          value: 0
+          summary: Filter inactive users only
+    CreatedFromQuery:
+      name: createdFrom
+      in: query
+      description: Filter users created from this date/datetime. Supports both date (YYYY-MM-DD) and datetime (YYYY-MM-DDTHH:mm:ss) formats.
+      required: false
+      schema:
+        type: string
+      examples:
+        dateOnly:
+          value: '2025-01-01'
+          summary: Filter from start of date
+        dateTime:
+          value: '2025-01-01T10:30:00'
+          summary: Filter from specific time
+    CreatedToQuery:
+      name: createdTo
+      in: query
+      description: Filter users created up to this date/datetime. Supports both date (YYYY-MM-DD) and datetime (YYYY-MM-DDTHH:mm:ss) formats.
+      required: false
+      schema:
+        type: string
+      examples:
+        dateOnly:
+          value: '2025-12-31'
+          summary: Filter to end of date
+        dateTime:
+          value: '2025-12-31T23:59:59'
+          summary: Filter to specific time
 

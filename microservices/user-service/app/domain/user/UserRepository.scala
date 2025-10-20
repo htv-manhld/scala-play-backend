@@ -10,8 +10,27 @@ import domain.shared.{DomainError, PaginatedResponse}
 trait UserRepository {
   def findById(id: UserId): Future[Option[User]]
   def findByEmail(email: Email): Future[Option[User]]
-  def findAll(limit: Int = 10000): Future[Seq[User]]
-  def findAllPaginated(page: Int = 0, size: Int = 20): Future[PaginatedResponse[User]]
+  def findAll(
+    limit: Int = 10000,
+    search: Option[String] = None,
+    orderBy: Option[String] = None,
+    orderDirection: Option[String] = None,
+    ignoreId: Option[Long] = None,
+    status: Option[Int] = None,
+    createdFrom: Option[String] = None,
+    createdTo: Option[String] = None
+  ): Future[Seq[User]]
+  def findAllPaginated(
+    page: Int = 0,
+    size: Int = 20,
+    search: Option[String] = None,
+    orderBy: Option[String] = None,
+    orderDirection: Option[String] = None,
+    ignoreId: Option[Long] = None,
+    status: Option[Int] = None,
+    createdFrom: Option[String] = None,
+    createdTo: Option[String] = None
+  ): Future[PaginatedResponse[User]]
   def save(user: User): Future[Either[DomainError, User]]
   def delete(id: UserId): Future[Either[DomainError, Unit]]
   def nextIdentity(): Future[UserId]

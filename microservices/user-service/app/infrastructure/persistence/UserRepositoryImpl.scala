@@ -101,23 +101,213 @@ class UserRepositoryImpl @Inject()(
     }
   }
 
-  override def findAll(limit: Int = 10000): Future[Seq[User]] = {
-    val query = users
-      .sortBy(_.id.asc)
-      .take(limit)
+  override def findAll(
+    limit: Int = 10000,
+    search: Option[String] = None,
+    orderBy: Option[String] = None,
+    orderDirection: Option[String] = None,
+    ignoreId: Option[Long] = None,
+    status: Option[Int] = None,
+    createdFrom: Option[String] = None,
+    createdTo: Option[String] = None
+  ): Future[Seq[User]] = {
+    // Apply search filter
+    val searchQuery = search match {
+      case Some(searchTerm) =>
+        val searchPattern = s"%${searchTerm.toLowerCase}%"
+        // Try to parse as Long for ID search
+        val idSearch = scala.util.Try(searchTerm.toLong).toOption
+
+        idSearch match {
+          case Some(id) =>
+            // If it's a valid ID, search by ID OR name OR email
+            users.filter(u =>
+              u.id === id ||
+              u.name.toLowerCase.like(searchPattern) ||
+              u.email.toLowerCase.like(searchPattern)
+            )
+          case None =>
+            // If not a valid ID, only search by name and email
+            users.filter(u =>
+              u.name.toLowerCase.like(searchPattern) ||
+              u.email.toLowerCase.like(searchPattern)
+            )
+        }
+      case None => users
+    }
+
+    // Apply ignoreId filter
+    val ignoreIdQuery = ignoreId match {
+      case Some(id) => searchQuery.filter(_.id =!= id)
+      case None => searchQuery
+    }
+
+    // Apply status filter
+    val statusQuery = status match {
+      case Some(s) => ignoreIdQuery.filter(_.status === s)
+      case None => ignoreIdQuery
+    }
+
+    // Apply createdAt date range filter
+    val createdFromQuery = createdFrom match {
+      case Some(dateTimeStr) =>
+        // Try parsing as full datetime first, then as date only
+        val parsedDateTime = scala.util.Try(LocalDateTime.parse(dateTimeStr)).toOption
+          .orElse(scala.util.Try(LocalDateTime.parse(dateTimeStr + "T00:00:00")).toOption)
+
+        parsedDateTime match {
+          case Some(dateTime) => statusQuery.filter(_.createdAt >= dateTime)
+          case None => statusQuery
+        }
+      case None => statusQuery
+    }
+
+    val baseQuery = createdTo match {
+      case Some(dateTimeStr) =>
+        // Try parsing as full datetime first, then as date only with end of day
+        val parsedDateTime = scala.util.Try(LocalDateTime.parse(dateTimeStr)).toOption
+          .orElse(scala.util.Try(LocalDateTime.parse(dateTimeStr + "T23:59:59")).toOption)
+
+        parsedDateTime match {
+          case Some(dateTime) => createdFromQuery.filter(_.createdAt <= dateTime)
+          case None => createdFromQuery
+        }
+      case None => createdFromQuery
+    }
+
+    // Apply ordering
+    val orderedQuery = orderBy match {
+      case Some("name") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.name.desc)
+        else baseQuery.sortBy(_.name.asc)
+      case Some("email") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.email.desc)
+        else baseQuery.sortBy(_.email.asc)
+      case Some("status") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.status.desc)
+        else baseQuery.sortBy(_.status.asc)
+      case Some("createdAt") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.createdAt.desc)
+        else baseQuery.sortBy(_.createdAt.asc)
+      case Some("updatedAt") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.updatedAt.desc)
+        else baseQuery.sortBy(_.updatedAt.asc)
+      case Some("id") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.id.desc)
+        else baseQuery.sortBy(_.id.asc)
+      case _ => baseQuery.sortBy(_.id.asc) // Default ordering
+    }
+
+    val query = orderedQuery.take(limit)
 
     db.run(query.result).map(_.map(toDomain)).recover {
       case _ => Seq.empty
     }
   }
 
-  override def findAllPaginated(page: Int = 0, size: Int = 20): Future[PaginatedResponse[User]] = {
-    // Query for total count
-    val countQuery = users.length.result
+  override def findAllPaginated(
+    page: Int = 0,
+    size: Int = 20,
+    search: Option[String] = None,
+    orderBy: Option[String] = None,
+    orderDirection: Option[String] = None,
+    ignoreId: Option[Long] = None,
+    status: Option[Int] = None,
+    createdFrom: Option[String] = None,
+    createdTo: Option[String] = None
+  ): Future[PaginatedResponse[User]] = {
+    // Apply search filter
+    val searchQuery = search match {
+      case Some(searchTerm) =>
+        val searchPattern = s"%${searchTerm.toLowerCase}%"
+        // Try to parse as Long for ID search
+        val idSearch = scala.util.Try(searchTerm.toLong).toOption
+
+        idSearch match {
+          case Some(id) =>
+            // If it's a valid ID, search by ID OR name OR email
+            users.filter(u =>
+              u.id === id ||
+              u.name.toLowerCase.like(searchPattern) ||
+              u.email.toLowerCase.like(searchPattern)
+            )
+          case None =>
+            // If not a valid ID, only search by name and email
+            users.filter(u =>
+              u.name.toLowerCase.like(searchPattern) ||
+              u.email.toLowerCase.like(searchPattern)
+            )
+        }
+      case None => users
+    }
+
+    // Apply ignoreId filter
+    val ignoreIdQuery = ignoreId match {
+      case Some(id) => searchQuery.filter(_.id =!= id)
+      case None => searchQuery
+    }
+
+    // Apply status filter
+    val statusQuery = status match {
+      case Some(s) => ignoreIdQuery.filter(_.status === s)
+      case None => ignoreIdQuery
+    }
+
+    // Apply createdAt date range filter
+    val createdFromQuery = createdFrom match {
+      case Some(dateTimeStr) =>
+        // Try parsing as full datetime first, then as date only
+        val parsedDateTime = scala.util.Try(LocalDateTime.parse(dateTimeStr)).toOption
+          .orElse(scala.util.Try(LocalDateTime.parse(dateTimeStr + "T00:00:00")).toOption)
+
+        parsedDateTime match {
+          case Some(dateTime) => statusQuery.filter(_.createdAt >= dateTime)
+          case None => statusQuery
+        }
+      case None => statusQuery
+    }
+
+    val baseQuery = createdTo match {
+      case Some(dateTimeStr) =>
+        // Try parsing as full datetime first, then as date only with end of day
+        val parsedDateTime = scala.util.Try(LocalDateTime.parse(dateTimeStr)).toOption
+          .orElse(scala.util.Try(LocalDateTime.parse(dateTimeStr + "T23:59:59")).toOption)
+
+        parsedDateTime match {
+          case Some(dateTime) => createdFromQuery.filter(_.createdAt <= dateTime)
+          case None => createdFromQuery
+        }
+      case None => createdFromQuery
+    }
+
+    // Query for total count (with all filters applied)
+    val countQuery = baseQuery.length.result
+
+    // Apply ordering
+    val orderedQuery = orderBy match {
+      case Some("name") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.name.desc)
+        else baseQuery.sortBy(_.name.asc)
+      case Some("email") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.email.desc)
+        else baseQuery.sortBy(_.email.asc)
+      case Some("status") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.status.desc)
+        else baseQuery.sortBy(_.status.asc)
+      case Some("createdAt") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.createdAt.desc)
+        else baseQuery.sortBy(_.createdAt.asc)
+      case Some("updatedAt") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.updatedAt.desc)
+        else baseQuery.sortBy(_.updatedAt.asc)
+      case Some("id") =>
+        if (orderDirection.contains("desc")) baseQuery.sortBy(_.id.desc)
+        else baseQuery.sortBy(_.id.asc)
+      case _ => baseQuery.sortBy(_.id.asc) // Default ordering
+    }
 
     // Query for paginated data
-    val dataQuery = users
-      .sortBy(_.id.asc)
+    val dataQuery = orderedQuery
       .drop(page * size)
       .take(size)
       .result
